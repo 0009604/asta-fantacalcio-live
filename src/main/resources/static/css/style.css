@@ -1,0 +1,65 @@
+* { -webkit-tap-highlight-color: transparent; }
+
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+@keyframes pop {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-pop { animation: pop 0.25s ease-out; }
+
+@keyframes toastIn {
+  0% { transform: translateY(-12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+.animate-toast { animation: toastIn 0.2s ease-out; }
+
+@keyframes flashWin {
+  0%, 100% { background-color: rgba(16,185,129,0.15); }
+  50% { background-color: rgba(16,185,129,0.35); }
+}
+.flash-win { animation: flashWin 0.9s ease-in-out 2; }
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Slider rilancio: barra e manopola più grandi per toccarla facilmente su mobile */
+#sliderRilancio {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  border-radius: 999px;
+  background: #1e293b;
+  outline: none;
+  touch-action: pan-y;
+}
+#sliderRilancio::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  border: 4px solid #082f49;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+#sliderRilancio::-moz-range-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  border: 4px solid #082f49;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+#sliderRilancio::-moz-range-track {
+  height: 16px;
+  border-radius: 999px;
+  background: #1e293b;
+}
+#sliderRilancio:disabled::-webkit-slider-thumb { background: #475569; }
+#sliderRilancio:disabled::-moz-range-thumb { background: #475569; }
