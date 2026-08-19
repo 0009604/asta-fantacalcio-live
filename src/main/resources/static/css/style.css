@@ -1,6 +1,11 @@
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
 
 /* ── Animations ─────────────────────────────────── */
 @keyframes pop {
@@ -309,6 +314,16 @@ button[id^="btnRicarica"]:hover {
   margin: 0;
 }
 
+/* ── Autocomplete suggestions ──────────────────── */
+#listaSuggerimenti {
+  position: absolute !important;
+  z-index: 999999 !important;
+  overflow: visible !important;
+}
+#listaSuggerimenti.hidden { display: none; }
+
+#formChiamata { overflow: visible !important; }
+
 /* ── Focus Asta: fullscreen mode when auction active ── */
 body.focus-asta #appHeader,
 body.focus-asta #bannerPausa,
@@ -316,9 +331,81 @@ body.focus-asta #asideLeft,
 body.focus-asta #asideRight {
   display: none !important;
 }
+
+/* ── Mobile Responsive — Zero Horizontal Scroll ─── */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+main, main > section, main > aside {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+#dialWrap {
+  width: 100% !important;
+  max-width: 260px;
+  height: auto !important;
+  aspect-ratio: 1 / 1;
+}
+
+#piattoAsta, #formChiamata, #autoBidPanel {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+#timerStickyWrap {
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  max-width: calc(100% + 2rem);
+  box-sizing: border-box;
+}
+
 body.focus-asta main {
-  grid-template-columns: 1fr !important;
-  max-width: 480px;
-  margin-left: auto;
-  margin-right: auto;
+  max-width: min(480px, 100vw - 1.5rem);
+  width: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+body.focus-asta #piattoAsta {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (max-width: 430px) {
+  #dialWrap {
+    max-width: 220px;
+  }
+  #piattoAsta {
+    padding: 1rem 0.75rem;
+  }
+  #btnConfermaDial {
+    min-height: 52px;
+    font-size: 1rem;
+  }
+  #btnRilancioRapido {
+    min-height: 44px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 360px) {
+  #dialWrap {
+    max-width: 200px;
+  }
+  main > section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  #piattoAsta {
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 0.5rem;
+  }
 }

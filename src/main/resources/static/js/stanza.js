@@ -32,6 +32,7 @@ let ultimoEventoAggiudicazioneVincitore = null; // per triggerare confetti solo 
 let autoBidAttivo = false;
 let autoBidMax = 50;
 let autoBidOffertaPrecedente = null; // per rilevare quando qualcuno rilancia dopo di noi
+let userHasSelectedValue = false; // lock: true quando l'utente ha impostato manualmente il dial
 
 // DIAL CONSTANTS
 const DIAL_CX = 130, DIAL_CY = 130, DIAL_R = 110;
@@ -42,6 +43,35 @@ const DIAL_START_DEG = 60;
 let dialMin = 1, dialMax = 100;
 let dialDragging = false;
 let astaAttivaPrecedente = false;
+
+// Reset totale dello stato dial a ogni nuova chiamata
+function resetDialState() {
+  valoreStaged = 0;
+  ultimaOffertaVista = null;
+  userHasSelectedValue = null;
+  ultimoSecondoVibrato = null;
+  autoBidAttivo = false;
+  autoBidOffertaPrecedente = null;
+  autoBidMax = 50;
+  var autoInput = document.getElementById('autoBidMaxInput');
+  if (autoInput) autoInput.value = '';
+  var autoInactive = document.getElementById('autoBidInactive');
+  var autoActive = document.getElementById('autoBidActive');
+  if (autoInactive) { autoInactive.classList.remove('hidden'); }
+  if (autoActive) { autoActive.classList.add('hidden'); autoActive.classList.remove('flex'); }
+  var statusEl = document.getElementById('autoBidStatus');
+  if (statusEl) statusEl.classList.add('hidden');
+  aggiornaDialVisual(0);
+  var handle = document.getElementById('dialHandle');
+  if (handle) {
+    handle.style.opacity = '0.3';
+    handle.style.pointerEvents = 'none';
+  }
+  var valoreTxt = document.getElementById('dialValoreTxt');
+  if (valoreTxt) valoreTxt.textContent = '1';
+  var btnConf = document.getElementById('btnConfermaDial');
+  if (btnConf) btnConf.textContent = 'CONFERMA RILANCIO';
+}
 
 // ---------------------------------------------------------------- AUDIO (beep locale, solo su azione propria)
 
@@ -370,18 +400,7 @@ function renderStato(dto) {
       if (nomeVincitore && nomeVincitore.toLowerCase() === mioNome.toLowerCase()) {
         lanciaConfetti();
       }
-      // reset dial + auto-bid state
-      valoreStaged = null;
-      ultimaOffertaVista = null;
-      autoBidAttivo = false;
-      autoBidOffertaPrecedente = null;
-      autoBidMax = 50;
-      var autoInput = document.getElementById('autoBidMaxInput');
-      if (autoInput) autoInput.value = '';
-      var autoInactive = document.getElementById('autoBidInactive');
-      var autoActive = document.getElementById('autoBidActive');
-      if (autoInactive) { autoInactive.classList.remove('hidden'); }
-      if (autoActive) { autoActive.classList.add('hidden'); autoActive.classList.remove('flex'); }
+      resetDialState();
     }
   }
 
@@ -602,6 +621,7 @@ function renderPiatto(asta, config, me) {
   // enter focus mode on transition
   if (!astaAttivaPrecedente) {
     astaAttivaPrecedente = true;
+    resetDialState();
     document.body.classList.add('focus-asta');
     setTimeout(() => {
       var dw = document.getElementById('dialWrap');
@@ -619,8 +639,14 @@ function renderPiatto(asta, config, me) {
 
   const totale = Math.max(config.timerSecondi, 1);
   const frazione = Math.max(0, Math.min(1, asta.secondiRimanenti / totale));
-  const inCritico = asta.secondiRimanenti <= 2;
-  const coloreTimer = inCritico ? '#dc2626' : '#b45309';
+  let coloreTimer;
+  if (frazione > 0.5) {
+    coloreTimer = '#10b981'; // verde: >50%
+  } else if (frazione > 0.25) {
+    coloreTimer = '#f59e0b'; // arancione: 25%-50%
+  } else {
+    coloreTimer = '#dc2626'; // rosso: <25%
+  }
 
   const secondiLabel = document.getElementById('secondiLabel');
   secondiLabel.textContent = asta.secondiRimanenti + ' s';
@@ -721,7 +747,11 @@ function aggiornaDial(asta, config, me, sonoIoInTesta) {
 
   if (ultimaOffertaVista !== asta.offertaCorrente) {
     ultimaOffertaVista = asta.offertaCorrente;
-    valoreStaged = min;
+    // Lock: se l'utente ha selezionato un valore e la nuova offerta non lo supera, mantieni il valore selezionato
+    if (!userHasSelectedValue || asta.offertaCorrente >= valoreStaged) {
+      valoreStaged = min;
+      userHasSelectedValue = false;
+    }
   }
   valoreStaged = Math.min(Math.max(valoreStaged, min), max);
 
@@ -868,14 +898,26 @@ document.getElementById('btnRilancioRapido').addEventListener('click', () => {
     const frac = rel / DIAL_ARC_DEG;
     valoreStaged = Math.round(min + frac * (max - min));
     valoreStaged = Math.min(Math.max(valoreStaged, min), max);
+    userHasSelectedValue = true;
 
     aggiornaDialVisual(frac);
     document.getElementById('dialValoreTxt').textContent = valoreStaged;
     document.getElementById('btnConfermaDial').textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
   }
 
+  function isNearHandle(clientX, clientY) {
+    const handle = document.getElementById('dialHandle');
+    if (!handle) return false;
+    const hRect = handle.getBoundingClientRect();
+    const hx = hRect.left + hRect.width / 2;
+    const hy = hRect.top + hRect.height / 2;
+    const dist = Math.hypot(clientX - hx, clientY - hy);
+    return dist <= 35;
+  }
+
   wrap.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
+    if (!isNearHandle(e.clientX, e.clientY)) return;
     dialDragging = true;
     handleInput(e.clientX, e.clientY);
     const onMove = (ev) => { if (dialDragging) handleInput(ev.clientX, ev.clientY); };
@@ -885,9 +927,11 @@ document.getElementById('btnRilancioRapido').addEventListener('click', () => {
   });
 
   wrap.addEventListener('touchstart', (e) => {
+    if (!e.touches[0]) return;
+    if (!isNearHandle(e.touches[0].clientX, e.touches[0].clientY)) return;
     e.preventDefault();
     dialDragging = true;
-    if (e.touches[0]) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+    handleInput(e.touches[0].clientX, e.touches[0].clientY);
   }, { passive: false });
 
   wrap.addEventListener('touchmove', (e) => {
@@ -901,6 +945,7 @@ document.getElementById('btnRilancioRapido').addEventListener('click', () => {
 document.getElementById('btnConfermaDial').addEventListener('click', () => {
   if (!valoreStaged) return;
   beep();
+  userHasSelectedValue = false;
   stompClient.publish({
     destination: '/app/stanza/' + codiceStanza + '/rilancio',
     body: JSON.stringify({ importo: valoreStaged })
