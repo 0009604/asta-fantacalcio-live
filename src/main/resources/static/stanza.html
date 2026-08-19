@@ -27,9 +27,12 @@
       <div class="text-[11px] text-slate-500 leading-none">Budget residuo</div>
       <div class="text-2xl font-extrabold text-emerald-400 leading-tight" id="budgetLabel">0</div>
     </div>
-    <div class="text-right">
-      <div class="text-[11px] text-slate-500 leading-none">Fantasquadra</div>
-      <div class="font-semibold leading-none" id="nomeLabel">-</div>
+    <div class="text-right flex items-center gap-3">
+      <span class="bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 tracking-wider">v2.0.0.0.1</span>
+      <div>
+        <div class="text-[11px] text-slate-500 leading-none">Fantasquadra</div>
+        <div class="font-semibold leading-none" id="nomeLabel">-</div>
+      </div>
     </div>
   </div>
 </header>
@@ -153,10 +156,10 @@
         </div>
 
         <!-- 2: barra tempo orizzontale -->
-        <div class="mb-3">
+        <div id="timerStickyWrap" class="mb-3 sticky top-[49px] z-30 bg-slate-900/95 backdrop-blur -mx-6 px-6 py-2 rounded-xl border border-slate-800/50 shadow-lg">
           <div id="secondiLabel" class="text-lg font-bold mb-1" style="color:#b45309;">10 s</div>
-          <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
-            <div id="barraTimer" class="h-full rounded-full" style="width:100%; background:#b45309; transition:width 1s linear, background-color 0.3s ease;"></div>
+          <div id="wrapperBarraTimer" class="w-full bg-slate-800 rounded-full overflow-hidden">
+            <div id="barraTimer" class="rounded-full" style="width:100%; background:#b45309; transition:width 1s linear, background-color 0.3s ease;"></div>
           </div>
         </div>
 

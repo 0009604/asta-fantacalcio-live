@@ -1,7 +1,8 @@
-* { -webkit-tap-highlight-color: transparent; }
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
 
+/* ── Animations ─────────────────────────────────── */
 @keyframes pop {
   0% { transform: scale(0.85); opacity: 0; }
   60% { transform: scale(1.05); opacity: 1; }
@@ -21,45 +22,242 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 }
 .flash-win { animation: flashWin 0.9s ease-in-out 2; }
 
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(14,165,233,0.3); }
+  50% { box-shadow: 0 0 20px rgba(14,165,233,0.6); }
+}
+
+/* ── Scrollbar ──────────────────────────────────── */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
-/* Slider rilancio: barra e manopola più grandi per toccarla facilmente su mobile */
+/* ── General button restyling ───────────────────── */
+button, [type="submit"] {
+  border-radius: 0.75rem !important;
+  transition: all 0.2s ease;
+}
+
+/* ── Bid / Rilancio buttons — Mobile first ──────── */
+.btn-delta,
+#btnRilancioRapido,
+#btnConfermaSlider,
+#btnChiama {
+  min-height: 52px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  border-radius: 0.875rem !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Stepper grid: spacious touch targets */
+#blocRilancioRapido .flex {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  #blocRilancioRapido .flex {
+    grid-template-columns: repeat(6, auto);
+    display: flex !important;
+    gap: 0.5rem;
+  }
+}
+
+.btn-delta {
+  min-width: 0;
+  width: 100% !important;
+  height: 52px !important;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #f1f5f9;
+  border: 1px solid rgba(148,163,184,0.2);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.btn-delta:hover, .btn-delta:active {
+  background: linear-gradient(135deg, #334155 0%, #475569 100%);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+  transform: scale(1.03);
+}
+
+/* Big "RILANCIA +1" button */
+#btnRilancioRapido {
+  min-height: 56px;
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.15) 100%);
+  border: 1.5px solid rgba(255,255,255,0.25) !important;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  letter-spacing: 0.05em;
+}
+#btnRilancioRapido:hover, #btnRilancioRapido:active {
+  background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.25) 100%);
+  box-shadow: 0 4px 16px rgba(14,165,233,0.3);
+  transform: scale(1.02);
+}
+
+/* CONFERMA RILANCIO — primary action */
+#btnConfermaSlider {
+  min-height: 56px;
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #0c0c0c;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(14,165,233,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+  letter-spacing: 0.03em;
+}
+#btnConfermaSlider:hover, #btnConfermaSlider:active {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  box-shadow: 0 6px 20px rgba(14,165,233,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+
+/* Chiama button */
+#btnChiama {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #0c0c0c;
+  border: none !important;
+  box-shadow: 0 3px 10px rgba(14,165,233,0.35);
+}
+#btnChiama:hover, #btnChiama:active {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  transform: translateY(-1px);
+}
+
+/* ── Timer Sticky ───────────────────────────────── */
+#timerStickyWrap {
+  position: sticky;
+  top: 49px;
+  z-index: 30;
+  margin-left: -1.5rem;
+  margin-right: -1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+#secondiLabel {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+#wrapperBarraTimer {
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #1e293b;
+}
+
+#barraTimer {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 1s linear, background-color 0.3s ease;
+}
+
+/* ── Slider rilancio ────────────────────────────── */
 #sliderRilancio {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 16px;
+  height: 18px;
   border-radius: 999px;
-  background: #1e293b;
+  background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
   outline: none;
   touch-action: pan-y;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 #sliderRilancio::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: #0ea5e9;
-  border: 4px solid #082f49;
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  border: 4px solid #0c4a6e;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 12px rgba(14,165,233,0.3);
 }
 #sliderRilancio::-moz-range-thumb {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  background: #0ea5e9;
-  border: 4px solid #082f49;
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  border: 4px solid #0c4a6e;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 12px rgba(14,165,233,0.3);
 }
 #sliderRilancio::-moz-range-track {
-  height: 16px;
+  height: 18px;
   border-radius: 999px;
-  background: #1e293b;
+  background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
 }
 #sliderRilancio:disabled::-webkit-slider-thumb { background: #475569; }
 #sliderRilancio:disabled::-moz-range-thumb { background: #475569; }
+
+/* ── Cards / Panels — glassmorphism & shadows ───── */
+.bg-slate-900 {
+  background-color: rgba(15,23,42,0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── Admin / Action buttons ─────────────────────── */
+#btnTogglePausa {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #0c0c0c;
+  font-weight: 800;
+  box-shadow: 0 3px 10px rgba(245,158,11,0.35);
+  border: none !important;
+}
+#btnTogglePausa:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(245,158,11,0.45);
+}
+
+#btnMostraQr {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  box-shadow: 0 3px 10px rgba(2,132,199,0.3);
+  border: none !important;
+}
+#btnMostraQr:hover {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  transform: translateY(-1px);
+}
+
+button[id^="btnScarica"],
+button[id^="btnRicarica"] {
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  border: 1px solid rgba(148,163,184,0.15) !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+button[id^="btnScarica"]:hover,
+button[id^="btnRicarica"]:hover {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+}
+
+/* ── Piatto asta — main card ────────────────────── */
+#piattoAsta {
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3), 0 0 0 1px rgba(148,163,184,0.08);
+  border-radius: 1rem !important;
+}
+
+/* ── Offerta corrente — highlighted ─────────────── */
+.bg-emerald-600 {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 4px 16px rgba(5,150,105,0.35), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* ── Version badge shimmer ──────────────────────── */
+@keyframes badge-shimmer {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
