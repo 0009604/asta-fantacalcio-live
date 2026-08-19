@@ -110,8 +110,8 @@ button, [type="submit"] {
   margin-right: -1.5rem;
   padding-left: 1.5rem;
   padding-right: 1.5rem;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
 }
 
 #secondiLabel {
@@ -133,7 +133,7 @@ button, [type="submit"] {
   transition: width 1s linear, background-color 0.3s ease;
 }
 
-/* ── Stepper + Quick Chips ───────────────────────── */
+/* ── Stepper Compact ─────────────────────────────── */
 #stepperValueDisplay {
   text-shadow: 0 0 20px rgba(255,255,255,0.15);
 }
@@ -152,6 +152,7 @@ button, [type="submit"] {
   user-select: none;
   -webkit-user-select: none;
   cursor: pointer;
+  touch-action: manipulation;
 }
 .stepper-btn-minus {
   background: rgba(239,68,68,0.12);
@@ -171,31 +172,6 @@ button, [type="submit"] {
 }
 .stepper-btn:active:not(:disabled) {
   transform: scale(0.92);
-}
-
-.chip-btn {
-  min-width: 48px;
-  padding: 0.4rem 0.6rem;
-  border-radius: 0.625rem !important;
-  font-size: 0.8rem;
-  font-weight: 700;
-  font-family: monospace;
-  border: 1px solid rgba(255,255,255,0.15) !important;
-  background: rgba(255,255,255,0.06);
-  color: #cbd5e1;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.chip-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.14);
-  border-color: rgba(255,255,255,0.3) !important;
-  transform: scale(1.06);
-  box-shadow: 0 0 8px rgba(14,165,233,0.25);
-}
-.chip-btn:active:not(:disabled) {
-  transform: scale(0.94);
 }
 
 /* ── Cards / Panels — glassmorphism & shadows ───── */
@@ -404,28 +380,28 @@ main, main > section, main > aside {
 }
 
 body.focus-asta main {
-  max-width: min(480px, 100vw - 1.5rem);
+  max-width: min(480px, 100vw - 1rem);
   width: 100%;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+body.focus-asta #piattoAsta {
   padding-left: 0.75rem;
   padding-right: 0.75rem;
 }
 
-body.focus-asta #piattoAsta {
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
 @media (max-width: 430px) {
   #piattoAsta {
-    padding: 1rem 0.75rem;
+    padding: 0.75rem 0.625rem;
   }
   #btnConfermaDial {
-    min-height: 52px;
+    min-height: 48px;
     font-size: 1rem;
   }
   #btnRilancioRapido {
-    min-height: 44px;
-    font-size: 0.95rem;
+    min-height: 40px;
+    font-size: 0.9rem;
   }
   .stepper-btn {
     width: 44px;
@@ -433,12 +409,8 @@ body.focus-asta #piattoAsta {
     font-size: 1.3rem;
   }
   #stepperValueDisplay {
-    font-size: 2.75rem;
-  }
-  .chip-btn {
-    min-width: 42px;
-    padding: 0.35rem 0.5rem;
-    font-size: 0.75rem;
+    font-size: 2.25rem;
+    min-width: 64px;
   }
 }
 

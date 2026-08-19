@@ -427,11 +427,6 @@ function renderPausa(inPausa, sonoAdmin) {
       el.classList.toggle('cursor-not-allowed', inPausa);
     }
   });
-  document.querySelectorAll('.chip-btn').forEach(el => {
-    el.disabled = inPausa;
-    el.classList.toggle('opacity-40', inPausa);
-    el.classList.toggle('cursor-not-allowed', inPausa);
-  });
 }
 
 function renderPartecipanti(partecipanti, adminNome, astaCorrente) {
@@ -715,7 +710,6 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   const btnRapido = document.getElementById('btnRilancioRapido');
   const btnMinus = document.getElementById('btnStepperMinus');
   const btnPlus = document.getElementById('btnStepperPlus');
-  const chips = document.querySelectorAll('.chip-btn');
 
   if (disabilitato) {
     btnConf.disabled = true;
@@ -726,9 +720,8 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
     btnMinus.classList.add('opacity-40', 'cursor-not-allowed');
     btnPlus.disabled = true;
     btnPlus.classList.add('opacity-40', 'cursor-not-allowed');
-    chips.forEach(c => { c.disabled = true; c.classList.add('opacity-40', 'cursor-not-allowed'); });
     svEl.textContent = '—';
-    svEl.className = 'text-5xl font-black text-slate-500 font-mono min-w-[90px] leading-none';
+    svEl.className = 'text-4xl font-black text-slate-500 font-mono min-w-[80px] leading-none';
     ppEl.textContent = asta.offertaCorrente || '—';
     if (!haSlotLiberi) {
       ldEl.textContent = 'ruolo pieno';
@@ -750,7 +743,6 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   btnMinus.classList.remove('opacity-40', 'cursor-not-allowed');
   btnPlus.disabled = false;
   btnPlus.classList.remove('opacity-40', 'cursor-not-allowed');
-  chips.forEach(c => { c.disabled = false; c.classList.remove('opacity-40', 'cursor-not-allowed'); });
 
   // Update prezzo attuale
   ppEl.textContent = asta.offertaCorrente;
@@ -775,7 +767,7 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   valoreStaged = Math.min(Math.max(valoreStaged, min), max);
 
   svEl.textContent = valoreStaged;
-  svEl.className = 'text-5xl font-black text-white font-mono min-w-[90px] leading-none';
+  svEl.className = 'text-4xl font-black text-white font-mono min-w-[80px] leading-none';
   btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
 
   btnMinus.disabled = valoreStaged <= min;
@@ -903,15 +895,35 @@ function applyStepperDelta(delta) {
   document.getElementById('btnStepperPlus').classList.toggle('opacity-40', valoreStaged >= max);
 }
 
-document.getElementById('btnStepperMinus').addEventListener('click', () => applyStepperDelta(-1));
-document.getElementById('btnStepperPlus').addEventListener('click', () => applyStepperDelta(1));
+function startLongPress(delta) {
+  applyStepperDelta(delta);
+  longPressInterval = setInterval(() => applyStepperDelta(delta), 80);
+}
 
-document.querySelectorAll('.chip-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const delta = parseInt(btn.dataset.delta, 10);
-    if (!isNaN(delta)) applyStepperDelta(delta);
-  });
-});
+function stopLongPress() {
+  if (longPressInterval) { clearInterval(longPressInterval); longPressInterval = null; }
+}
+
+let longPressInterval = null;
+
+(function initStepperLongPress() {
+  const btnMinus = document.getElementById('btnStepperMinus');
+  const btnPlus = document.getElementById('btnStepperPlus');
+
+  btnMinus.addEventListener('mousedown', () => { if (!btnMinus.disabled) startLongPress(-1); });
+  btnMinus.addEventListener('mouseup', stopLongPress);
+  btnMinus.addEventListener('mouseleave', stopLongPress);
+  btnMinus.addEventListener('touchstart', (e) => { if (!btnMinus.disabled) { e.preventDefault(); startLongPress(-1); } }, { passive: false });
+  btnMinus.addEventListener('touchend', stopLongPress);
+  btnMinus.addEventListener('touchcancel', stopLongPress);
+
+  btnPlus.addEventListener('mousedown', () => { if (!btnPlus.disabled) startLongPress(1); });
+  btnPlus.addEventListener('mouseup', stopLongPress);
+  btnPlus.addEventListener('mouseleave', stopLongPress);
+  btnPlus.addEventListener('touchstart', (e) => { if (!btnPlus.disabled) { e.preventDefault(); startLongPress(1); } }, { passive: false });
+  btnPlus.addEventListener('touchend', stopLongPress);
+  btnPlus.addEventListener('touchcancel', stopLongPress);
+})();
 
 document.getElementById('btnConfermaDial').addEventListener('click', () => {
   if (!valoreStaged) return;
