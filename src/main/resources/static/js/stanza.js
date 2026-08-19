@@ -14,6 +14,31 @@ localStorage.setItem('fanta_nome', mioNome);
 document.getElementById('codiceStanzaLabel').textContent = codiceStanza;
 document.getElementById('nomeLabel').textContent = mioNome;
 
+// ---------------------------------------------------------------- SPLASH INTRO
+(function gestisciIntro() {
+  const chiudiIntro = () => {
+    const overlay = document.getElementById('splashIntro');
+    if (!overlay || overlay.style.display === 'none') return;
+    overlay.classList.add('fade-out');
+    setTimeout(() => { overlay.style.display = 'none'; }, 400);
+  };
+
+  if (sessionStorage.getItem('introGiocata_' + codiceStanza) === 'true') {
+    const overlay = document.getElementById('splashIntro');
+    if (overlay) overlay.style.display = 'none';
+  } else {
+    const video = document.getElementById('introVideo');
+    const skipBtn = document.getElementById('skipIntroBtn');
+    const overlay = document.getElementById('splashIntro');
+    overlay.style.display = 'flex';
+    video.play().catch(() => {});
+    video.addEventListener('ended', chiudiIntro);
+    skipBtn.addEventListener('click', chiudiIntro);
+    video.addEventListener('ended', () => sessionStorage.setItem('introGiocata_' + codiceStanza, 'true'));
+    skipBtn.addEventListener('click', () => sessionStorage.setItem('introGiocata_' + codiceStanza, 'true'));
+  }
+})();
+
 const RUOLI = [
   { key: 'PORTIERE', label: 'Portieri', short: 'P', color: 'bg-amber-500/20 text-amber-300' },
   { key: 'DIFENSORE', label: 'Difensori', short: 'D', color: 'bg-sky-500/20 text-sky-300' },
