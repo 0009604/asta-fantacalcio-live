@@ -33,6 +33,15 @@ let autoBidAttivo = false;
 let autoBidMax = 50;
 let autoBidOffertaPrecedente = null; // per rilevare quando qualcuno rilancia dopo di noi
 
+// DIAL CONSTANTS
+const DIAL_CX = 130, DIAL_CY = 130, DIAL_R = 110;
+const DIAL_CIRC = 2 * Math.PI * DIAL_R;
+const DIAL_ARC_DEG = 270;
+const DIAL_ARC_LEN = DIAL_CIRC * (DIAL_ARC_DEG / 360);
+const DIAL_START_DEG = 135;
+let dialMin = 1, dialMax = 100;
+let dialDragging = false;
+
 // ---------------------------------------------------------------- AUDIO (beep locale, solo su azione propria)
 
 let audioCtx = null;
@@ -382,18 +391,18 @@ function renderPausa(inPausa, sonoAdmin) {
   formChiamata.querySelectorAll('input, select, button').forEach(el => el.disabled = inPausa);
   formChiamata.classList.toggle('opacity-50', inPausa);
 
-  ['btnRilancioRapido', 'sliderRilancio', 'btnConfermaSlider'].forEach(id => {
+  ['btnRilancioRapido', 'btnConfermaDial'].forEach(id => {
     const el = document.getElementById(id);
-    if (inPausa) {
-      el.disabled = true;
-      el.classList.add('opacity-40', 'cursor-not-allowed');
+    if (el) {
+      el.disabled = inPausa;
+      el.classList.toggle('opacity-40', inPausa);
+      el.classList.toggle('cursor-not-allowed', inPausa);
     }
   });
-  if (inPausa) {
-    document.querySelectorAll('.btn-delta').forEach(el => {
-      el.disabled = true;
-      el.classList.add('opacity-40', 'cursor-not-allowed');
-    });
+  const dialHandle = document.getElementById('dialHandle');
+  if (dialHandle) {
+    dialHandle.style.pointerEvents = inPausa ? 'none' : 'auto';
+    dialHandle.classList.toggle('opacity-40', inPausa);
   }
 }
 
@@ -612,12 +621,7 @@ function renderPiatto(asta, config, me) {
     offerenteWrap.innerHTML = 'è in testa <span class="text-lg font-bold text-slate-100">' + escapeHtml(asta.offerenteNome) + '</span>';
   }
 
-  const btnRapido = document.getElementById('btnRilancioRapido');
-  btnRapido.disabled = !!sonoIoInTesta;
-  btnRapido.classList.toggle('opacity-40', !!sonoIoInTesta);
-  btnRapido.classList.toggle('cursor-not-allowed', !!sonoIoInTesta);
-
-  aggiornaControlliSlider(asta, config, me, sonoIoInTesta);
+  aggiornaDial(asta, config, me, sonoIoInTesta);
 }
 
 function calcolaOffertaMassima(me, config) {
@@ -632,47 +636,88 @@ function calcolaOffertaMassima(me, config) {
   return me.budgetResiduo - (slotLiberiTotali - 1);
 }
 
-function aggiornaControlliSlider(asta, config, me, sonoIoInTesta) {
-  const blocco = document.getElementById('blocRilancioRapido');
-  const slider = document.getElementById('sliderRilancio');
-  const label = document.getElementById('sliderValoreLabel');
-  const btnConferma = document.getElementById('btnConfermaSlider');
-  const deltaBtns = document.querySelectorAll('.btn-delta');
+// ---------------------------------------------------------------- DIAL HELPERS
 
+function dialFracToAngle(frac) {
+  return DIAL_START_DEG + frac * DIAL_ARC_DEG;
+}
+
+function dialFracToXY(frac) {
+  const rad = dialFracToAngle(frac) * Math.PI / 180;
+  return { x: DIAL_CX + DIAL_R * Math.cos(rad), y: DIAL_CY + DIAL_R * Math.sin(rad) };
+}
+
+function aggiornaDialVisual(frac) {
+  const progress = document.getElementById('dialProgress');
+  const handle = document.getElementById('dialHandle');
+  const arcLen = Math.max(0, frac * DIAL_ARC_LEN);
+  progress.setAttribute('stroke-dasharray', arcLen + ' ' + DIAL_CIRC);
+  const pos = dialFracToXY(frac);
+  const wrap = document.getElementById('dialWrap');
+  const vw = wrap.offsetWidth, vh = wrap.offsetHeight;
+  handle.style.left = (pos.x / 260 * vw) + 'px';
+  handle.style.top = (pos.y / 260 * vh) + 'px';
+}
+
+function aggiornaDial(asta, config, me, sonoIoInTesta) {
   const min = asta.offertaCorrente + 1;
+  const max = calcolaOffertaMassima(me, config);
+  dialMin = min;
+  dialMax = max;
+
   const slotUsatiRuolo = (me && me.rosa[asta.ruolo]) ? me.rosa[asta.ruolo].length : 0;
   const slotTotaliRuolo = config[SLOT_CONFIG_KEY[asta.ruolo]];
   const haSlotLiberi = slotTotaliRuolo - slotUsatiRuolo > 0;
-  const max = calcolaOffertaMassima(me, config);
-
   const disabilitato = !!sonoIoInTesta || !haSlotLiberi || max < min;
 
-  [slider, btnConferma, ...deltaBtns].forEach(el => {
-    el.disabled = disabilitato;
-    el.classList.toggle('opacity-40', disabilitato);
-    el.classList.toggle('cursor-not-allowed', disabilitato);
-  });
+  const handle = document.getElementById('dialHandle');
+  const btnConf = document.getElementById('btnConfermaDial');
+  const btnRapido = document.getElementById('btnRilancioRapido');
+  const valoreTxt = document.getElementById('dialValoreTxt');
+  const progress = document.getElementById('dialProgress');
 
   if (disabilitato) {
-    label.textContent = !haSlotLiberi ? 'ruolo pieno' : (max < min ? 'budget insuff.' : '-');
-    blocco.classList.add('opacity-60');
+    handle.style.opacity = '0.3';
+    handle.style.pointerEvents = 'none';
+    btnConf.disabled = true;
+    btnConf.classList.add('opacity-40', 'cursor-not-allowed');
+    btnRapido.disabled = true;
+    btnRapido.classList.add('opacity-40', 'cursor-not-allowed');
+    valoreTxt.textContent = '\u2014';
+    aggiornaDialVisual(0);
+    progress.setAttribute('stroke', '#475569');
+    document.getElementById('dialOfferenteTxt').textContent = !haSlotLiberi ? 'ruolo pieno' : (max < min ? 'budget insufficiente' : '');
     return;
   }
-  blocco.classList.remove('opacity-60');
 
-  slider.min = min;
-  slider.max = max;
+  handle.style.opacity = '1';
+  handle.style.pointerEvents = 'auto';
+  btnConf.disabled = false;
+  btnConf.classList.remove('opacity-40', 'cursor-not-allowed');
+  btnRapido.disabled = false;
+  btnRapido.classList.remove('opacity-40', 'cursor-not-allowed');
+  progress.setAttribute('stroke', sonoIoInTesta ? '#10b981' : '#0ea5e9');
 
-  // resetta il valore "impostato" solo se l'offerta corrente è cambiata (nuovo piatto o rilancio altrui)
   if (ultimaOffertaVista !== asta.offertaCorrente) {
     ultimaOffertaVista = asta.offertaCorrente;
     valoreStaged = min;
   }
   valoreStaged = Math.min(Math.max(valoreStaged, min), max);
 
-  slider.value = valoreStaged;
-  label.textContent = valoreStaged + ' cr.';
-  btnConferma.textContent = `CONFERMA RILANCIO (${valoreStaged} cr.)`;
+  const frac = Math.max(0, Math.min(1, (valoreStaged - min) / (max - min)));
+  aggiornaDialVisual(frac);
+
+  valoreTxt.textContent = valoreStaged;
+  btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
+
+  const offerenteTxt = document.getElementById('dialOfferenteTxt');
+  if (sonoIoInTesta) {
+    offerenteTxt.textContent = '\uD83C\uDFC6 SEI IN TESTA';
+    offerenteTxt.setAttribute('fill', '#10b981');
+  } else {
+    offerenteTxt.textContent = asta.offerenteNome ? ('in testa: ' + asta.offerenteNome) : '';
+    offerenteTxt.setAttribute('fill', '#94a3b8');
+  }
 }
 
 // ---------------------------------------------------------------- CALCOLO TETTO SICUREZZA
@@ -701,7 +746,7 @@ function gestisciAutoBid(dto) {
 
   const tetto = calcolaTettoSicurezza(me, dto.configurazione);
   if (ceilingEl) {
-    ceilingEl.textContent = `Tetto sicurezza: ${tetto} cr. (budget ${me.budgetResiduo} - (slot liberi - 1))`;
+    ceilingEl.textContent = 'Tetto sicurezza: ' + tetto + ' cr. (budget ' + me.budgetResiduo + ' - (slot liberi - 1))';
   }
 
   if (!autoBidAttivo || !dto.astaCorrente || !dto.astaCorrente.attiva || dto.inPausa) {
@@ -714,29 +759,28 @@ function gestisciAutoBid(dto) {
   const sonoInTesta = asta.offerenteNome && asta.offerenteNome.toLowerCase() === mioNome.toLowerCase();
 
   if (sonoInTesta) {
-    statusEl.textContent = '✅ Sei in testa - in attesa...';
+    statusEl.textContent = '\u2705 Sei in testa \u2014 in attesa...';
     statusEl.className = 'text-[10px] text-emerald-400 mt-1 font-semibold';
     statusEl.classList.remove('hidden');
     autoBidOffertaPrecedente = asta.offertaCorrente;
     return;
   }
 
-  // Qualcun altro ha rilanciato dopo di noi: prova a rilanciare +1
   if (autoBidOffertaPrecedente !== null && asta.offertaCorrente > autoBidOffertaPrecedente) {
     const prossimoRilancio = asta.offertaCorrente + 1;
     if (prossimoRilancio <= autoBidMax && prossimoRilancio <= tetto) {
-      statusEl.textContent = `⚡ Rilancio automatico a ${prossimoRilancio} cr.!`;
+      statusEl.textContent = '\u26A1 Rilancio automatico a ' + prossimoRilancio + ' cr.!';
       statusEl.className = 'text-[10px] text-amber-400 mt-1 font-semibold';
       statusEl.classList.remove('hidden');
       autoBidOffertaPrecedente = prossimoRilancio;
       beep();
       stompClient.publish({
-        destination: `/app/stanza/${codiceStanza}/rilancio`,
+        destination: '/app/stanza/' + codiceStanza + '/rilancio',
         body: JSON.stringify({ importo: prossimoRilancio })
       });
       return;
     } else {
-      statusEl.textContent = `⛔ Tetto raggiunto (${prossimoRilancio} > ${Math.min(autoBidMax, tetto)})`;
+      statusEl.textContent = '\u26D4 Tetto raggiunto (' + prossimoRilancio + ' > ' + Math.min(autoBidMax, tetto) + ')';
       statusEl.className = 'text-[10px] text-rose-400 mt-1 font-semibold';
       statusEl.classList.remove('hidden');
       autoBidOffertaPrecedente = null;
@@ -745,7 +789,7 @@ function gestisciAutoBid(dto) {
   }
 
   autoBidOffertaPrecedente = asta.offertaCorrente;
-  statusEl.textContent = '⏳ In attesa di rilancio...';
+  statusEl.textContent = '\u23F3 In attesa di rilancio...';
   statusEl.className = 'text-[10px] text-violet-400 mt-1 font-semibold';
   statusEl.classList.remove('hidden');
 }
@@ -775,38 +819,69 @@ document.getElementById('formChiamata').addEventListener('submit', (e) => {
 document.getElementById('btnRilancioRapido').addEventListener('click', () => {
   beep();
   stompClient.publish({
-    destination: `/app/stanza/${codiceStanza}/rilancio`,
+    destination: '/app/stanza/' + codiceStanza + '/rilancio',
     body: JSON.stringify({ importo: null })
   });
 });
 
-// stepper -5/-1/+1/+5/+10: regolano il valore impostato sullo slider (non inviano subito)
-document.querySelectorAll('.btn-delta').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (btn.disabled) return;
-    const slider = document.getElementById('sliderRilancio');
-    const delta = parseInt(btn.dataset.delta, 10);
-    const min = parseInt(slider.min, 10);
-    const max = parseInt(slider.max, 10);
-    valoreStaged = Math.min(Math.max(valoreStaged + delta, min), max);
-    slider.value = valoreStaged;
-    document.getElementById('sliderValoreLabel').textContent = valoreStaged + ' cr.';
-    document.getElementById('btnConfermaSlider').textContent = `CONFERMA RILANCIO (${valoreStaged} cr.)`;
+// ---------------------------------------------------------------- DIAL INTERACTION
+
+(function initDial() {
+  const wrap = document.getElementById('dialWrap');
+  if (!wrap) return;
+
+  function handleInput(clientX, clientY) {
+    const rect = wrap.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let deg = Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI;
+    if (deg < 0) deg += 360;
+
+    let rel = deg - DIAL_START_DEG;
+    if (rel < 0) rel += 360;
+    if (rel > DIAL_ARC_DEG) return;
+
+    const min = dialMin, max = dialMax;
+    if (max < min) return;
+
+    const frac = rel / DIAL_ARC_DEG;
+    valoreStaged = Math.round(min + frac * (max - min));
+    valoreStaged = Math.min(Math.max(valoreStaged, min), max);
+
+    aggiornaDialVisual(frac);
+    document.getElementById('dialValoreTxt').textContent = valoreStaged;
+    document.getElementById('btnConfermaDial').textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
+  }
+
+  wrap.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    dialDragging = true;
+    handleInput(e.clientX, e.clientY);
+    const onMove = (ev) => { if (dialDragging) handleInput(ev.clientX, ev.clientY); };
+    const onUp = () => { dialDragging = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
-});
 
-// trascinando lo slider si aggiorna solo il valore "impostato", nessun invio finché non si conferma
-document.getElementById('sliderRilancio').addEventListener('input', (e) => {
-  valoreStaged = parseInt(e.target.value, 10);
-  document.getElementById('sliderValoreLabel').textContent = valoreStaged + ' cr.';
-  document.getElementById('btnConfermaSlider').textContent = `CONFERMA RILANCIO (${valoreStaged} cr.)`;
-});
+  wrap.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    dialDragging = true;
+    if (e.touches[0]) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
 
-document.getElementById('btnConfermaSlider').addEventListener('click', () => {
+  wrap.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (dialDragging && e.touches[0]) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  wrap.addEventListener('touchend', () => { dialDragging = false; });
+})();
+
+document.getElementById('btnConfermaDial').addEventListener('click', () => {
   if (!valoreStaged) return;
   beep();
   stompClient.publish({
-    destination: `/app/stanza/${codiceStanza}/rilancio`,
+    destination: '/app/stanza/' + codiceStanza + '/rilancio',
     body: JSON.stringify({ importo: valoreStaged })
   });
 });
@@ -841,20 +916,31 @@ document.getElementById('btnScaricaTutteTxt').addEventListener('click', () => {
   window.location.href = `/api/stanze/${codiceStanza}/rosa-tutte?nomeRichiedente=${encodeURIComponent(mioNome)}&formato=txt`;
 });
 
-// ---------------------------------------------------------------- AUTOBID TOGGLE
+// ---------------------------------------------------------------- AUTOBID COMPACT MODE
 
-document.getElementById('autoBidToggle').addEventListener('change', (e) => {
-  autoBidAttivo = e.target.checked;
-  document.getElementById('autoBidConfig').classList.toggle('hidden', !autoBidAttivo);
-  document.getElementById('autoBidStatus').classList.toggle('hidden', !autoBidAttivo);
+document.getElementById('btnAutoBidAttiva').addEventListener('click', () => {
+  const input = document.getElementById('autoBidMaxInput');
+  const maxVal = parseInt(input.value, 10);
+  if (!maxVal || maxVal < 1) return;
+
+  autoBidMax = maxVal;
+  autoBidAttivo = true;
   autoBidOffertaPrecedente = null;
-  if (!autoBidAttivo) {
-    document.getElementById('autoBidStatus').textContent = '';
-  }
+
+  document.getElementById('autoBidInactive').classList.add('hidden');
+  document.getElementById('autoBidActive').classList.remove('hidden');
+  document.getElementById('autoBidActive').classList.add('flex');
+  document.getElementById('autoBidBadgeText').textContent = 'Auto-bid fino a ' + maxVal + ' cr';
 });
 
-document.getElementById('autoBidMax').addEventListener('change', (e) => {
-  autoBidMax = parseInt(e.target.value, 10) || 50;
+document.getElementById('btnAutoBidAnnulla').addEventListener('click', () => {
+  autoBidAttivo = false;
+  autoBidOffertaPrecedente = null;
+
+  document.getElementById('autoBidInactive').classList.remove('hidden');
+  document.getElementById('autoBidActive').classList.add('hidden');
+  document.getElementById('autoBidActive').classList.remove('flex');
+  document.getElementById('autoBidStatus').classList.add('hidden');
 });
 
 // ---------------------------------------------------------------- UTIL
