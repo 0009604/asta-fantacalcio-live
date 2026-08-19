@@ -5,6 +5,7 @@ import com.fantacalcio.asta.dto.ChiamataRequest;
 import com.fantacalcio.asta.dto.JoinRequest;
 import com.fantacalcio.asta.dto.PausaRequest;
 import com.fantacalcio.asta.dto.RilancioRequest;
+import com.fantacalcio.asta.dto.StuzzicaRequest;
 import com.fantacalcio.asta.dto.TimerRequest;
 import com.fantacalcio.asta.service.StanzaService;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -66,5 +67,11 @@ public class AstaWebSocketController {
     public void modificaRosa(@DestinationVariable String codice, @Payload AdminModificaRosaRequest req,
                               SimpMessageHeaderAccessor headerAccessor) {
         stanzaService.adminModificaRosa(codice, idConnessione(headerAccessor), req);
+    }
+
+    @MessageMapping("/stanza/{codice}/stuzzica")
+    public void stuzzica(@DestinationVariable String codice, @Payload StuzzicaRequest req,
+                         SimpMessageHeaderAccessor headerAccessor) {
+        stanzaService.stuzzica(codice, idConnessione(headerAccessor), req);
     }
 }

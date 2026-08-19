@@ -331,6 +331,7 @@ public class StanzaService {
                 return;
             }
 
+            int vecchiaOfferta = asta.getOffertaCorrente();
             asta.setOffertaCorrente(importo);
             asta.setOfferenteNome(offerente.getNome());
             asta.setSecondiRimanenti(stanza.getConfigurazione().getTimerSecondi());
@@ -338,7 +339,9 @@ public class StanzaService {
             stanza.aggiungiLog(offerente.getNome() + " rilancia a " + importo);
 
             avviaTimer(stanza); // reset countdown
-            broadcastStato(stanza, null);
+            int delta = importo - vecchiaOfferta;
+            EventoDTO eventoAudio = (delta >= 5) ? new EventoDTO("AUDIO_CASH", null, "💰") : null;
+            broadcastStato(stanza, eventoAudio);
         } finally {
             stanza.getLock().unlock();
         }
@@ -440,6 +443,53 @@ public class StanzaService {
             }
 
             broadcastStato(stanza, null);
+        } finally {
+            stanza.getLock().unlock();
+        }
+    }
+
+    // ---------------------------------------------------------------- STUZZICA
+
+    private static final String[] FRASI_STUZZICA = {
+            "coglione",
+            "figa to mare",
+            "mongolo",
+            "i te gà battezzà con l'acqua del codeghin",
+            "non sapevo avessi la 104",
+            "vai a battere in via Zoppega",
+            "pelado"
+    };
+
+    public void stuzzica(String codiceStanza, String sessionId, StuzzicaRequest req) {
+        StanzaAsta stanza = getStanza(codiceStanza);
+        if (stanza == null || req.getNomeDestinatario() == null) return;
+
+        stanza.getLock().lock();
+        try {
+            Utente mittente = utenteDaSessione(stanza, sessionId);
+            if (mittente == null) return;
+
+            AstaCorrente asta = stanza.getAstaCorrente();
+            if (asta.isAttiva()) {
+                inviaEventoPrivato(stanza, sessionId, "ERRORE", "Non puoi stuzzicare durante un'asta attiva!");
+                return;
+            }
+
+            Utente destinatario = trovaUtentePerNome(stanza, req.getNomeDestinatario());
+            if (destinatario == null || !destinatario.isConnesso() || destinatario.getSessionId() == null) {
+                inviaEventoPrivato(stanza, sessionId, "ERRORE", "Utente non raggiungibile.");
+                return;
+            }
+
+            if (mittente.getNome().equalsIgnoreCase(destinatario.getNome())) {
+                inviaEventoPrivato(stanza, sessionId, "ERRORE", "Non puoi stuzzicare te stesso!");
+                return;
+            }
+
+            String frase = FRASI_STUZZICA[RANDOM.nextInt(FRASI_STUZZICA.length)];
+            String messaggio = "💬 Messaggio da " + mittente.getNome() + ": " + frase;
+
+            inviaEventoPrivato(stanza, destinatario.getSessionId(), "STUZZICA", messaggio);
         } finally {
             stanza.getLock().unlock();
         }

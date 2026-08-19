@@ -261,3 +261,94 @@ button[id^="btnRicarica"]:hover {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
 }
+
+/* ── Confetti / Winner animation ────────────────── */
+#confettiOverlay.active {
+  display: block;
+  animation: confetti-fade-out 0.8s ease-in 2.5s forwards;
+}
+
+.confetti-particle {
+  position: absolute;
+  font-size: 2rem;
+  top: -40px;
+  animation: confetti-fall var(--fall-duration, 2.5s) ease-in forwards;
+  animation-delay: var(--fall-delay, 0s);
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105vh) rotate(var(--fall-spin, 720deg)) scale(0.6);
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fade-out {
+  0% { opacity: 1; }
+  100% { opacity: 0; display: none; }
+}
+
+/* ── Stuzzica toast styling ─────────────────────── */
+.toast-stuzzica {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  border-color: #8b5cf6 !important;
+  color: #fff !important;
+  font-weight: 700 !important;
+  font-size: 1.05rem !important;
+  box-shadow: 0 4px 20px rgba(124,58,237,0.5), 0 0 40px rgba(124,58,237,0.2);
+  padding: 0.875rem 1.25rem !important;
+  animation: toastIn 0.3s ease-out, stuzzica-shake 0.5s ease-in-out 0.3s;
+}
+
+@keyframes stuzzica-shake {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  10% { transform: translateX(-50%) translateX(-6px); }
+  30% { transform: translateX(-50%) translateX(6px); }
+  50% { transform: translateX(-50%) translateX(-4px); }
+  70% { transform: translateX(-50%) translateX(4px); }
+  90% { transform: translateX(-50%) translateX(-2px); }
+}
+
+/* ── Stuzzica button styling ────────────────────── */
+.btn-stuzzica {
+  background: rgba(124,58,237,0.15);
+  border: 1px solid rgba(139,92,246,0.3);
+  color: #c4b5fd;
+  border-radius: 0.5rem !important;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  line-height: 1;
+}
+.btn-stuzzica:hover:not(:disabled) {
+  background: rgba(124,58,237,0.3);
+  border-color: rgba(139,92,246,0.5);
+  transform: scale(1.1);
+  box-shadow: 0 0 10px rgba(124,58,237,0.3);
+}
+.btn-stuzzica:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Auto-bid toggle switch ─────────────────────── */
+#autoBidToggle:checked + div {
+  background-color: #8b5cf6 !important;
+}
+#autoBidPanel {
+  background: linear-gradient(135deg, rgba(139,92,246,0.06) 0%, rgba(124,58,237,0.02) 100%);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(139,92,246,0.15);
+}

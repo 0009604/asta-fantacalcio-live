@@ -28,6 +28,10 @@ let listinoSelezionato = null; // { nome, ruolo, squadra } se l'utente ha scelto
 let valoreStaged = null;       // valore attualmente impostato sullo slider di rilancio
 let ultimaOffertaVista = null; // per capire quando resettare lo slider (nuova offerta altrui)
 let ultimoSecondoVibrato = null; // per non far vibrare più volte lo stesso secondo
+let ultimoEventoAggiudicazioneVincitore = null; // per triggerare confetti solo al vincitore
+let autoBidAttivo = false;
+let autoBidMax = 50;
+let autoBidOffertaPrecedente = null; // per rilevare quando qualcuno rilancia dopo di noi
 
 // ---------------------------------------------------------------- AUDIO (beep locale, solo su azione propria)
 
@@ -45,6 +49,48 @@ function beep() {
     o.start();
     o.stop(audioCtx.currentTime + 0.35);
   } catch (e) { /* audio non disponibile, ignora */ }
+}
+
+// ---------------------------------------------------------------- AUDIO CASH (rilancio pesante)
+
+const cashAudio = new Audio('/audio/cash.mp3');
+cashAudio.volume = 0.45;
+let cashInRiproduzione = false;
+function playCash() {
+  if (cashInRiproduzione) return;
+  cashInRiproduzione = true;
+  cashAudio.currentTime = 0;
+  cashAudio.play().catch(() => {}).finally(() => { cashInRiproduzione = false; });
+}
+
+// ---------------------------------------------------------------- CONFETTI WINNER
+
+function lanciaConfetti() {
+  const overlay = document.getElementById('confettiOverlay');
+  overlay.innerHTML = '';
+  overlay.classList.remove('active', 'hidden');
+  void overlay.offsetWidth; // force reflow per riattivare l'animazione
+  overlay.classList.add('active');
+
+  const emoji = ['🏆', '🎉', '⚽', '🍾', '✨', '🎊', '🥇', '🎆'];
+  const count = 40;
+  for (let i = 0; i < count; i++) {
+    const span = document.createElement('span');
+    span.className = 'confetti-particle';
+    span.textContent = emoji[Math.floor(Math.random() * emoji.length)];
+    span.style.left = Math.random() * 100 + '%';
+    span.style.setProperty('--fall-duration', (2 + Math.random() * 1.5) + 's');
+    span.style.setProperty('--fall-delay', (Math.random() * 0.8) + 's');
+    span.style.setProperty('--fall-spin', (360 + Math.random() * 720) + 'deg');
+    span.style.fontSize = (1.2 + Math.random() * 1.8) + 'rem';
+    overlay.appendChild(span);
+  }
+
+  setTimeout(() => {
+    overlay.classList.add('hidden');
+    overlay.classList.remove('active');
+    overlay.innerHTML = '';
+  }, 3800);
 }
 
 // ---------------------------------------------------------------- AUTOCOMPLETE LISTINO
@@ -161,6 +207,9 @@ function mostraToast(evento) {
   } else if (evento.tipo === 'SIMILE') {
     stile = 'bg-amber-500 border-amber-400 text-slate-950 font-semibold';
     durata = 2000;
+  } else if (evento.tipo === 'STUZZICA') {
+    stile = 'toast-stuzzica';
+    durata = 4000;
   }
 
   div.className = `animate-toast pointer-events-auto border rounded-xl px-4 py-2.5 shadow-lg ${stile}`;
@@ -287,7 +336,7 @@ function renderStato(dto) {
     }
   }
 
-  renderPartecipanti(dto.partecipanti, dto.adminNome);
+  renderPartecipanti(dto.partecipanti, dto.adminNome, dto.astaCorrente);
   renderLog(dto.log);
   renderPiatto(dto.astaCorrente, dto.configurazione, me);
   renderPausa(dto.inPausa, sonoAdmin);
@@ -300,8 +349,21 @@ function renderStato(dto) {
   }
 
   if (dto.evento && (dto.evento.targetNome == null || dto.evento.targetNome.toLowerCase() === mioNome.toLowerCase())) {
-    mostraToast(dto.evento);
+    if (dto.evento.tipo === 'AUDIO_CASH') {
+      playCash();
+    } else {
+      mostraToast(dto.evento);
+    }
+
+    if (dto.evento.tipo === 'AGGIUDICAZIONE' && dto.evento.messaggio) {
+      const nomeVincitore = dto.evento.messaggio.split(' ')[0];
+      if (nomeVincitore && nomeVincitore.toLowerCase() === mioNome.toLowerCase()) {
+        lanciaConfetti();
+      }
+    }
   }
+
+  gestisciAutoBid(dto);
 }
 
 function renderPausa(inPausa, sonoAdmin) {
@@ -335,9 +397,10 @@ function renderPausa(inPausa, sonoAdmin) {
   }
 }
 
-function renderPartecipanti(partecipanti, adminNome) {
+function renderPartecipanti(partecipanti, adminNome, astaCorrente) {
   const ul = document.getElementById('listaPartecipanti');
   ul.innerHTML = '';
+  const astaAttiva = !!(astaCorrente && astaCorrente.attiva);
   partecipanti.forEach(u => {
     const li = document.createElement('li');
     li.className = 'flex items-center justify-between gap-2';
@@ -348,9 +411,24 @@ function renderPartecipanti(partecipanti, adminNome) {
         <span class="truncate ${isMe ? 'font-bold text-emerald-400' : ''}">${escapeHtml(u.nome)}</span>
         ${u.admin ? '<span class="text-[10px] text-amber-400">★</span>' : ''}
       </span>
-      <span class="text-slate-400 font-mono text-xs">${u.budgetResiduo === null || u.budgetResiduo === undefined ? '🔒' : u.budgetResiduo}</span>
+      <span class="flex items-center gap-2">
+        <span class="text-slate-400 font-mono text-xs">${u.budgetResiduo === null || u.budgetResiduo === undefined ? '🔒' : u.budgetResiduo}</span>
+        ${!isMe && u.connesso ? `<button class="btn-stuzzica" data-target="${escapeAttr(u.nome)}" title="Stuzzica!" ${astaAttiva ? 'disabled' : ''}>💬</button>` : ''}
+      </span>
     `;
     ul.appendChild(li);
+  });
+
+  ul.querySelectorAll('.btn-stuzzica').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.target;
+      if (!target || btn.disabled) return;
+      beep();
+      stompClient.publish({
+        destination: `/app/stanza/${codiceStanza}/stuzzica`,
+        body: JSON.stringify({ nomeDestinatario: target })
+      });
+    });
   });
 }
 
@@ -370,12 +448,13 @@ function renderRosa(rosa, config) {
   RUOLI.forEach(r => {
     const giocatori = rosa[r.key] || [];
     const slotTotali = config[SLOT_CONFIG_KEY[r.key]];
+    const spesa = giocatori.reduce((sum, g) => sum + (g.prezzoPagato || 0), 0);
     const block = document.createElement('div');
     block.innerHTML = `
       <h3 class="text-xs font-bold uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
         <span class="px-1.5 py-0.5 rounded ${r.color}">${r.short}</span>
         <span class="text-slate-400">${r.label}</span>
-        <span class="text-slate-600 ml-auto">${giocatori.length}/${slotTotali}</span>
+        <span class="text-slate-600 ml-auto">${giocatori.length}/${slotTotali} <span class="text-slate-500">(${spesa} cr.)</span></span>
       </h3>
       <ul class="space-y-1 text-sm mb-3"></ul>
     `;
@@ -484,6 +563,7 @@ function renderPiatto(asta, config, me) {
     btnChiama.disabled = false;
     btnChiama.classList.remove('opacity-40', 'cursor-not-allowed');
     ultimoSecondoVibrato = null;
+    autoBidOffertaPrecedente = null;
     return;
   }
 
@@ -595,6 +675,83 @@ function aggiornaControlliSlider(asta, config, me, sonoIoInTesta) {
   btnConferma.textContent = `CONFERMA RILANCIO (${valoreStaged} cr.)`;
 }
 
+// ---------------------------------------------------------------- CALCOLO TETTO SICUREZZA
+
+function calcolaTettoSicurezza(me, config) {
+  if (!me) return 0;
+  let slotLiberiRuolo = 0;
+  RUOLI.forEach(r => {
+    const usati = (me.rosa[r.key] || []).length;
+    const totali = config[SLOT_CONFIG_KEY[r.key]];
+    slotLiberiRuolo += Math.max(0, totali - usati);
+  });
+  if (slotLiberiRuolo <= 0) return 0;
+  return me.budgetResiduo - (slotLiberiRuolo - 1);
+}
+
+// ---------------------------------------------------------------- OFFERTA AUTOMATICA
+
+function gestisciAutoBid(dto) {
+  const statusEl = document.getElementById('autoBidStatus');
+  const ceilingEl = document.getElementById('autoBidCeiling');
+  if (!statusEl) return;
+
+  const me = dto.partecipanti.find(u => u.nome.toLowerCase() === mioNome.toLowerCase());
+  if (!me) return;
+
+  const tetto = calcolaTettoSicurezza(me, dto.configurazione);
+  if (ceilingEl) {
+    ceilingEl.textContent = `Tetto sicurezza: ${tetto} cr. (budget ${me.budgetResiduo} - (slot liberi - 1))`;
+  }
+
+  if (!autoBidAttivo || !dto.astaCorrente || !dto.astaCorrente.attiva || dto.inPausa) {
+    statusEl.classList.add('hidden');
+    autoBidOffertaPrecedente = null;
+    return;
+  }
+
+  const asta = dto.astaCorrente;
+  const sonoInTesta = asta.offerenteNome && asta.offerenteNome.toLowerCase() === mioNome.toLowerCase();
+
+  if (sonoInTesta) {
+    statusEl.textContent = '✅ Sei in testa - in attesa...';
+    statusEl.className = 'text-[10px] text-emerald-400 mt-1 font-semibold';
+    statusEl.classList.remove('hidden');
+    autoBidOffertaPrecedente = asta.offertaCorrente;
+    return;
+  }
+
+  // Qualcun altro ha rilanciato dopo di noi: prova a rilanciare +1
+  if (autoBidOffertaPrecedente !== null && asta.offertaCorrente > autoBidOffertaPrecedente) {
+    const prossimoRilancio = asta.offertaCorrente + 1;
+    if (prossimoRilancio <= autoBidMax && prossimoRilancio <= tetto) {
+      statusEl.textContent = `⚡ Rilancio automatico a ${prossimoRilancio} cr.!`;
+      statusEl.className = 'text-[10px] text-amber-400 mt-1 font-semibold';
+      statusEl.classList.remove('hidden');
+      autoBidOffertaPrecedente = prossimoRilancio;
+      beep();
+      stompClient.publish({
+        destination: `/app/stanza/${codiceStanza}/rilancio`,
+        body: JSON.stringify({ importo: prossimoRilancio })
+      });
+      return;
+    } else {
+      statusEl.textContent = `⛔ Tetto raggiunto (${prossimoRilancio} > ${Math.min(autoBidMax, tetto)})`;
+      statusEl.className = 'text-[10px] text-rose-400 mt-1 font-semibold';
+      statusEl.classList.remove('hidden');
+      autoBidOffertaPrecedente = null;
+      return;
+    }
+  }
+
+  autoBidOffertaPrecedente = asta.offertaCorrente;
+  statusEl.textContent = '⏳ In attesa di rilancio...';
+  statusEl.className = 'text-[10px] text-violet-400 mt-1 font-semibold';
+  statusEl.classList.remove('hidden');
+}
+
+// ---------------------------------------------------------------- AUTOBID TOGGLE SETUP
+
 // ---------------------------------------------------------------- AZIONI
 
 document.getElementById('formChiamata').addEventListener('submit', (e) => {
@@ -682,6 +839,22 @@ document.getElementById('btnScaricaTutteJson').addEventListener('click', () => {
 });
 document.getElementById('btnScaricaTutteTxt').addEventListener('click', () => {
   window.location.href = `/api/stanze/${codiceStanza}/rosa-tutte?nomeRichiedente=${encodeURIComponent(mioNome)}&formato=txt`;
+});
+
+// ---------------------------------------------------------------- AUTOBID TOGGLE
+
+document.getElementById('autoBidToggle').addEventListener('change', (e) => {
+  autoBidAttivo = e.target.checked;
+  document.getElementById('autoBidConfig').classList.toggle('hidden', !autoBidAttivo);
+  document.getElementById('autoBidStatus').classList.toggle('hidden', !autoBidAttivo);
+  autoBidOffertaPrecedente = null;
+  if (!autoBidAttivo) {
+    document.getElementById('autoBidStatus').textContent = '';
+  }
+});
+
+document.getElementById('autoBidMax').addEventListener('change', (e) => {
+  autoBidMax = parseInt(e.target.value, 10) || 50;
 });
 
 // ---------------------------------------------------------------- UTIL
