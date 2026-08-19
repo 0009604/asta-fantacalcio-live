@@ -29,9 +29,6 @@ let valoreStaged = null;       // valore attualmente impostato sullo slider di r
 let ultimaOffertaVista = null; // per capire quando resettare lo slider (nuova offerta altrui)
 let ultimoSecondoVibrato = null; // per non far vibrare più volte lo stesso secondo
 let ultimoEventoAggiudicazioneVincitore = null; // per triggerare confetti solo al vincitore
-let autoBidAttivo = false;
-let autoBidMax = 50;
-let autoBidOffertaPrecedente = null; // per rilevare quando qualcuno rilancia dopo di noi
 let userHasSelectedValue = false; // lock: true quando l'utente ha impostato manualmente il dial
 let stuzzicaCooldownUntil = 0; // timestamp fino a cui il pulsante stuzzica è disabilitato
 
@@ -44,17 +41,6 @@ function resetDialState() {
   ultimaOffertaVista = null;
   userHasSelectedValue = null;
   ultimoSecondoVibrato = null;
-  autoBidAttivo = false;
-  autoBidOffertaPrecedente = null;
-  autoBidMax = 50;
-  var autoInput = document.getElementById('autoBidMaxInput');
-  if (autoInput) autoInput.value = '';
-  var autoInactive = document.getElementById('autoBidInactive');
-  var autoActive = document.getElementById('autoBidActive');
-  if (autoInactive) { autoInactive.classList.remove('hidden'); }
-  if (autoActive) { autoActive.classList.add('hidden'); autoActive.classList.remove('flex'); }
-  var statusEl = document.getElementById('autoBidStatus');
-  if (statusEl) statusEl.classList.add('hidden');
   var sv = document.getElementById('stepperValueDisplay');
   if (sv) sv.textContent = '1';
   var pp = document.getElementById('prezzoAttualeDisplay');
@@ -290,6 +276,37 @@ document.getElementById('btnScaricaBackup').addEventListener('click', () => {
   URL.revokeObjectURL(url);
 });
 
+// ---------------------------------------------------------------- AUTO-SAVE + RESTORE
+
+function inviaBackupAlServer() {
+  if (!ultimoStato) return;
+  try {
+    fetch('/api/backup/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ultimoStato)
+    }).catch(() => {});
+  } catch (e) { /* ignora */ }
+}
+
+setInterval(inviaBackupAlServer, 60000);
+
+document.getElementById('btnRipristinaBackup').addEventListener('click', async () => {
+  if (!confirm('Ripristinare lo stato dal backup del server? La stanza attuale verrà sovrascritta.')) return;
+  try {
+    const res = await fetch('/api/backup/restore', { method: 'POST' });
+    const data = await res.json();
+    if (data.nuovoCodice) {
+      alert('Backup ripristinato! Nuovo codice stanza: ' + data.nuovoCodice);
+      window.location.href = 'stanza.html?codice=' + data.nuovoCodice + '&nome=' + encodeURIComponent(mioNome);
+    } else {
+      alert('Nessun backup trovato sul server.');
+    }
+  } catch (e) {
+    alert('Errore durante il ripristino del backup.');
+  }
+});
+
 // ---------------------------------------------------------------- QR CODE
 
 document.getElementById('btnMostraQr').addEventListener('click', () => {
@@ -397,10 +414,9 @@ function renderStato(dto) {
         lanciaConfetti();
       }
       resetDialState();
+      inviaBackupAlServer();
     }
   }
-
-  gestisciAutoBid(dto);
 }
 
 function renderPausa(inPausa, sonoAdmin) {
@@ -616,7 +632,6 @@ function renderPiatto(asta, config, me) {
     btnChiama.disabled = false;
     btnChiama.classList.remove('opacity-40', 'cursor-not-allowed');
     ultimoSecondoVibrato = null;
-    autoBidOffertaPrecedente = null;
     if (astaAttivaPrecedente) {
       document.body.classList.remove('focus-asta');
       astaAttivaPrecedente = false;
@@ -634,8 +649,8 @@ function renderPiatto(asta, config, me) {
     resetDialState();
     document.body.classList.add('focus-asta');
     setTimeout(() => {
-      piatto.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }, 100);
   }
 
   const info = RUOLO_INFO[asta.ruolo];
@@ -786,82 +801,6 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   btnPlus.classList.toggle('opacity-40', valoreStaged >= max);
 }
 
-// ---------------------------------------------------------------- CALCOLO TETTO SICUREZZA
-
-function calcolaTettoSicurezza(me, config) {
-  if (!me) return 0;
-  let slotLiberiRuolo = 0;
-  RUOLI.forEach(r => {
-    const usati = (me.rosa[r.key] || []).length;
-    const totali = config[SLOT_CONFIG_KEY[r.key]];
-    slotLiberiRuolo += Math.max(0, totali - usati);
-  });
-  if (slotLiberiRuolo <= 0) return 0;
-  return me.budgetResiduo - (slotLiberiRuolo - 1);
-}
-
-// ---------------------------------------------------------------- OFFERTA AUTOMATICA
-
-function gestisciAutoBid(dto) {
-  const statusEl = document.getElementById('autoBidStatus');
-  const ceilingEl = document.getElementById('autoBidCeiling');
-  if (!statusEl) return;
-
-  const me = dto.partecipanti.find(u => u.nome.toLowerCase() === mioNome.toLowerCase());
-  if (!me) return;
-
-  const tetto = calcolaTettoSicurezza(me, dto.configurazione);
-  if (ceilingEl) {
-    ceilingEl.textContent = 'Tetto sicurezza: ' + tetto + ' cr. (budget ' + me.budgetResiduo + ' - (slot liberi - 1))';
-  }
-
-  if (!autoBidAttivo || !dto.astaCorrente || !dto.astaCorrente.attiva || dto.inPausa) {
-    statusEl.classList.add('hidden');
-    autoBidOffertaPrecedente = null;
-    return;
-  }
-
-  const asta = dto.astaCorrente;
-  const sonoInTesta = asta.offerenteNome && asta.offerenteNome.toLowerCase() === mioNome.toLowerCase();
-
-  if (sonoInTesta) {
-    statusEl.textContent = '\u2705 Sei in testa \u2014 in attesa...';
-    statusEl.className = 'text-[10px] text-emerald-400 mt-1 font-semibold';
-    statusEl.classList.remove('hidden');
-    autoBidOffertaPrecedente = asta.offertaCorrente;
-    return;
-  }
-
-  if (autoBidOffertaPrecedente !== null && asta.offertaCorrente > autoBidOffertaPrecedente) {
-    const prossimoRilancio = asta.offertaCorrente + 1;
-    if (prossimoRilancio <= autoBidMax && prossimoRilancio <= tetto) {
-      statusEl.textContent = '\u26A1 Rilancio automatico a ' + prossimoRilancio + ' cr.!';
-      statusEl.className = 'text-[10px] text-amber-400 mt-1 font-semibold';
-      statusEl.classList.remove('hidden');
-      autoBidOffertaPrecedente = prossimoRilancio;
-      beep();
-      stompClient.publish({
-        destination: '/app/stanza/' + codiceStanza + '/rilancio',
-        body: JSON.stringify({ importo: prossimoRilancio })
-      });
-      return;
-    } else {
-      statusEl.textContent = '\u26D4 Tetto raggiunto (' + prossimoRilancio + ' > ' + Math.min(autoBidMax, tetto) + ')';
-      statusEl.className = 'text-[10px] text-rose-400 mt-1 font-semibold';
-      statusEl.classList.remove('hidden');
-      autoBidOffertaPrecedente = null;
-      return;
-    }
-  }
-
-  autoBidOffertaPrecedente = asta.offertaCorrente;
-  statusEl.textContent = '\u23F3 In attesa di rilancio...';
-  statusEl.className = 'text-[10px] text-violet-400 mt-1 font-semibold';
-  statusEl.classList.remove('hidden');
-}
-
-// ---------------------------------------------------------------- AUTOBID TOGGLE SETUP
-
 // ---------------------------------------------------------------- AZIONI
 
 document.getElementById('formChiamata').addEventListener('submit', (e) => {
@@ -973,33 +912,6 @@ document.getElementById('btnScaricaTutteJson').addEventListener('click', () => {
 });
 document.getElementById('btnScaricaTutteTxt').addEventListener('click', () => {
   window.location.href = `/api/stanze/${codiceStanza}/rosa-tutte?nomeRichiedente=${encodeURIComponent(mioNome)}&formato=txt`;
-});
-
-// ---------------------------------------------------------------- AUTOBID COMPACT MODE
-
-document.getElementById('btnAutoBidAttiva').addEventListener('click', () => {
-  const input = document.getElementById('autoBidMaxInput');
-  const maxVal = parseInt(input.value, 10);
-  if (!maxVal || maxVal < 1) return;
-
-  autoBidMax = maxVal;
-  autoBidAttivo = true;
-  autoBidOffertaPrecedente = null;
-
-  document.getElementById('autoBidInactive').classList.add('hidden');
-  document.getElementById('autoBidActive').classList.remove('hidden');
-  document.getElementById('autoBidActive').classList.add('flex');
-  document.getElementById('autoBidBadgeText').textContent = 'Auto-bid fino a ' + maxVal + ' cr';
-});
-
-document.getElementById('btnAutoBidAnnulla').addEventListener('click', () => {
-  autoBidAttivo = false;
-  autoBidOffertaPrecedente = null;
-
-  document.getElementById('autoBidInactive').classList.remove('hidden');
-  document.getElementById('autoBidActive').classList.add('hidden');
-  document.getElementById('autoBidActive').classList.remove('flex');
-  document.getElementById('autoBidStatus').classList.add('hidden');
 });
 
 // ---------------------------------------------------------------- UTIL

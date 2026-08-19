@@ -316,23 +316,6 @@ button[id^="btnRicarica"]:hover {
   transform: none;
 }
 
-/* ── Auto-bid compact ────────────────────────────── */
-#autoBidPanel {
-  background: linear-gradient(135deg, rgba(139,92,246,0.04) 0%, rgba(124,58,237,0.01) 100%);
-  border-radius: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  border: 1px solid rgba(139,92,246,0.12);
-}
-
-#autoBidMaxInput {
-  -moz-appearance: textfield;
-}
-#autoBidMaxInput::-webkit-outer-spin-button,
-#autoBidMaxInput::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
 /* ── Autocomplete suggestions ──────────────────── */
 #listaSuggerimenti {
   position: absolute !important;
@@ -364,7 +347,7 @@ main, main > section, main > aside {
   box-sizing: border-box;
 }
 
-#piattoAsta, #formChiamata, #autoBidPanel {
+#piattoAsta, #formChiamata {
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;

@@ -2,9 +2,15 @@ package com.fantacalcio.asta.service;
 
 import com.fantacalcio.asta.dto.*;
 import com.fantacalcio.asta.model.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +40,21 @@ public class StanzaService {
         this.listinoService = listinoService;
         // backup automatico: ogni 60s, mandato in privato al solo admin di ogni stanza attiva
         scheduler.scheduleAtFixedRate(this::eseguiBackupPeriodico, 60, 60, TimeUnit.SECONDS);
+    }
+
+    @PostConstruct
+    public void ripristinaBackupAllAvvio() {
+        try {
+            Path path = Paths.get("backup_asta.json");
+            if (!Files.exists(path)) return;
+            BackupStanzaDTO backup = new ObjectMapper().readValue(path.toFile(), BackupStanzaDTO.class);
+            String codice = ripristinaStanza(backup);
+            if (codice != null) {
+                System.out.println("[StanzaService] Stanza ripristinata da backup all'avvio: " + codice);
+            }
+        } catch (Exception e) {
+            System.out.println("[StanzaService] Impossibile ripristinare backup all'avvio: " + e.getMessage());
+        }
     }
 
     // ---------------------------------------------------------------- EXPORT ROSE
