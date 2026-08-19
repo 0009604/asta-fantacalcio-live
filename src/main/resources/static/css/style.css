@@ -308,3 +308,17 @@ button[id^="btnRicarica"]:hover {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* ── Focus Asta: fullscreen mode when auction active ── */
+body.focus-asta #appHeader,
+body.focus-asta #bannerPausa,
+body.focus-asta #asideLeft,
+body.focus-asta #asideRight {
+  display: none !important;
+}
+body.focus-asta main {
+  grid-template-columns: 1fr !important;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+}

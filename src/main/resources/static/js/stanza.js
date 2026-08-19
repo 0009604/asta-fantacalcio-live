@@ -38,9 +38,10 @@ const DIAL_CX = 130, DIAL_CY = 130, DIAL_R = 110;
 const DIAL_CIRC = 2 * Math.PI * DIAL_R;
 const DIAL_ARC_DEG = 270;
 const DIAL_ARC_LEN = DIAL_CIRC * (DIAL_ARC_DEG / 360);
-const DIAL_START_DEG = 135;
+const DIAL_START_DEG = 60;
 let dialMin = 1, dialMax = 100;
 let dialDragging = false;
+let astaAttivaPrecedente = false;
 
 // ---------------------------------------------------------------- AUDIO (beep locale, solo su azione propria)
 
@@ -369,6 +370,18 @@ function renderStato(dto) {
       if (nomeVincitore && nomeVincitore.toLowerCase() === mioNome.toLowerCase()) {
         lanciaConfetti();
       }
+      // reset dial + auto-bid state
+      valoreStaged = null;
+      ultimaOffertaVista = null;
+      autoBidAttivo = false;
+      autoBidOffertaPrecedente = null;
+      autoBidMax = 50;
+      var autoInput = document.getElementById('autoBidMaxInput');
+      if (autoInput) autoInput.value = '';
+      var autoInactive = document.getElementById('autoBidInactive');
+      var autoActive = document.getElementById('autoBidActive');
+      if (autoInactive) { autoInactive.classList.remove('hidden'); }
+      if (autoActive) { autoActive.classList.add('hidden'); autoActive.classList.remove('flex'); }
     }
   }
 
@@ -573,6 +586,11 @@ function renderPiatto(asta, config, me) {
     btnChiama.classList.remove('opacity-40', 'cursor-not-allowed');
     ultimoSecondoVibrato = null;
     autoBidOffertaPrecedente = null;
+    // exit focus mode
+    if (astaAttivaPrecedente) {
+      document.body.classList.remove('focus-asta');
+      astaAttivaPrecedente = false;
+    }
     return;
   }
 
@@ -581,6 +599,16 @@ function renderPiatto(asta, config, me) {
   btnChiama.disabled = true;
   btnChiama.classList.add('opacity-40', 'cursor-not-allowed');
 
+  // enter focus mode on transition
+  if (!astaAttivaPrecedente) {
+    astaAttivaPrecedente = true;
+    document.body.classList.add('focus-asta');
+    setTimeout(() => {
+      var dw = document.getElementById('dialWrap');
+      if (dw) dw.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 120);
+  }
+
   const info = RUOLO_INFO[asta.ruolo];
   const badge = document.getElementById('badgeRuolo');
   badge.textContent = info.short + ' · ' + capitalize(asta.ruolo);
@@ -588,7 +616,6 @@ function renderPiatto(asta, config, me) {
 
   document.getElementById('nomeCalciatoreCorrente').textContent = asta.calciatoreNome;
   document.getElementById('squadraCalciatore').textContent = asta.squadra ? '(' + asta.squadra + ')' : '';
-  document.getElementById('offertaCorrenteLabel').textContent = asta.offertaCorrente;
 
   const totale = Math.max(config.timerSecondi, 1);
   const frazione = Math.max(0, Math.min(1, asta.secondiRimanenti / totale));
@@ -614,12 +641,6 @@ function renderPiatto(asta, config, me) {
   }
 
   const sonoIoInTesta = me && asta.offerenteNome && asta.offerenteNome.toLowerCase() === mioNome.toLowerCase();
-  const offerenteWrap = document.getElementById('offerenteWrap');
-  if (sonoIoInTesta) {
-    offerenteWrap.innerHTML = '<span class="text-emerald-400 font-bold">🎉 SEI IN TESTA</span>';
-  } else {
-    offerenteWrap.innerHTML = 'è in testa <span class="text-lg font-bold text-slate-100">' + escapeHtml(asta.offerenteNome) + '</span>';
-  }
 
   aggiornaDial(asta, config, me, sonoIoInTesta);
 }
