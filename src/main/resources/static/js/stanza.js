@@ -701,7 +701,6 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   const slotUsatiRuolo = (me && me.rosa[asta.ruolo]) ? me.rosa[asta.ruolo].length : 0;
   const slotTotaliRuolo = config[SLOT_CONFIG_KEY[asta.ruolo]];
   const haSlotLiberi = slotTotaliRuolo - slotUsatiRuolo > 0;
-  const disabilitato = !!sonoIoInTesta || !haSlotLiberi || max < min;
 
   const svEl = document.getElementById('stepperValueDisplay');
   const ppEl = document.getElementById('prezzoAttualeDisplay');
@@ -710,6 +709,22 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   const btnRapido = document.getElementById('btnRilancioRapido');
   const btnMinus = document.getElementById('btnStepperMinus');
   const btnPlus = document.getElementById('btnStepperPlus');
+  const biddingBox = document.getElementById('biddingControls');
+
+  // --- SEI IN TESTA: nascondi controlli, mostra solo leader grande ---
+  if (sonoIoInTesta) {
+    biddingBox.style.display = 'none';
+    ppEl.textContent = asta.offertaCorrente;
+    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-emerald-400';
+    ldEl.textContent = 'Sei in testa! \uD83C\uDF89';
+    ldEl.className = 'text-lg font-extrabold text-emerald-400';
+    return;
+  }
+
+  // --- NON sei in testa: mostra controlli ---
+  biddingBox.style.display = '';
+
+  const disabilitato = !haSlotLiberi || max < min;
 
   if (disabilitato) {
     btnConf.disabled = true;
@@ -723,6 +738,7 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
     svEl.textContent = '—';
     svEl.className = 'text-4xl font-black text-slate-500 font-mono min-w-[80px] leading-none';
     ppEl.textContent = asta.offertaCorrente || '—';
+    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-slate-200';
     if (!haSlotLiberi) {
       ldEl.textContent = 'ruolo pieno';
       ldEl.className = 'text-sm font-bold text-rose-400';
@@ -744,19 +760,13 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   btnPlus.disabled = false;
   btnPlus.classList.remove('opacity-40', 'cursor-not-allowed');
 
-  // Update prezzo attuale
   ppEl.textContent = asta.offertaCorrente;
-  ppEl.className = 'text-4xl font-black font-mono leading-none mb-1 ' + (sonoIoInTesta ? 'text-emerald-400' : 'text-slate-200');
+  ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-slate-200';
+  ldEl.textContent = asta.offerenteNome ? ('In testa: ' + asta.offerenteNome) : '';
+  ldEl.className = 'text-sm font-bold text-slate-400';
 
-  // Update leader
-  if (sonoIoInTesta) {
-    ldEl.textContent = 'Sei in testa! \uD83C\uDF89';
-    ldEl.className = 'text-sm font-bold text-emerald-400';
-  } else {
-    ldEl.textContent = asta.offerenteNome ? ('In testa: ' + asta.offerenteNome) : '';
-    ldEl.className = 'text-sm font-bold text-slate-400';
-  }
-
+  // Persistenza: blocca sovrascrittura finché l'utente non conferma
+  // o finché l'offerta al tavolo non supera il valore selezionato
   if (ultimaOffertaVista !== asta.offertaCorrente) {
     ultimaOffertaVista = asta.offertaCorrente;
     if (!userHasSelectedValue || asta.offertaCorrente >= valoreStaged) {
