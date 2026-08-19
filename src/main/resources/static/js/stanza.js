@@ -33,6 +33,7 @@ let autoBidAttivo = false;
 let autoBidMax = 50;
 let autoBidOffertaPrecedente = null; // per rilevare quando qualcuno rilancia dopo di noi
 let userHasSelectedValue = false; // lock: true quando l'utente ha impostato manualmente il dial
+let stuzzicaCooldownUntil = 0; // timestamp fino a cui il pulsante stuzzica è disabilitato
 
 // DIAL CONSTANTS
 const DIAL_CX = 130, DIAL_CY = 130, DIAL_R = 110;
@@ -253,7 +254,11 @@ function mostraToast(evento) {
   }
 
   div.className = `animate-toast pointer-events-auto border rounded-xl px-4 py-2.5 shadow-lg ${stile}`;
-  div.textContent = evento.messaggio;
+  let testoMostrato = evento.messaggio;
+  if (evento.tipo === 'STUZZICA' && testoMostrato) {
+    testoMostrato = testoMostrato.replace(/^💬\s*Messaggio da [^:]+:\s*/, '');
+  }
+  div.textContent = testoMostrato;
   area.appendChild(div);
   setTimeout(() => div.remove(), durata);
 }
@@ -464,11 +469,34 @@ function renderPartecipanti(partecipanti, adminNome, astaCorrente) {
     btn.addEventListener('click', () => {
       const target = btn.dataset.target;
       if (!target || btn.disabled) return;
+      if (Date.now() < stuzzicaCooldownUntil) {
+        const secRimanenti = Math.ceil((stuzzicaCooldownUntil - Date.now()) / 1000);
+        btn.title = 'Aspetta ' + secRimanenti + 's...';
+        return;
+      }
       beep();
       stompClient.publish({
         destination: `/app/stanza/${codiceStanza}/stuzzica`,
         body: JSON.stringify({ nomeDestinatario: target })
       });
+      stuzzicaCooldownUntil = Date.now() + 30000;
+      btn.disabled = true;
+      const origText = btn.textContent;
+      const countdownId = 'cd_' + Math.random();
+      btn.dataset.cdId = countdownId;
+      function tickCooldown() {
+        if (btn.dataset.cdId !== countdownId) return;
+        const rim = Math.ceil((stuzzicaCooldownUntil - Date.now()) / 1000);
+        if (rim > 0) {
+          btn.textContent = rim + 's';
+          setTimeout(tickCooldown, 500);
+        } else {
+          btn.textContent = origText;
+          btn.disabled = false;
+          btn.title = 'Stuzzica!';
+        }
+      }
+      setTimeout(tickCooldown, 200);
     });
   });
 }
@@ -594,12 +622,10 @@ function escapeAttr(str) {
 }
 
 function renderPiatto(asta, config, me) {
-  const vuoto = document.getElementById('piattoVuoto');
   const attivo = document.getElementById('piattoAttivo');
   const btnChiama = document.getElementById('btnChiama');
 
   if (!asta || !asta.attiva) {
-    vuoto.classList.remove('hidden');
     attivo.classList.add('hidden');
     btnChiama.disabled = false;
     btnChiama.classList.remove('opacity-40', 'cursor-not-allowed');
@@ -613,7 +639,6 @@ function renderPiatto(asta, config, me) {
     return;
   }
 
-  vuoto.classList.add('hidden');
   attivo.classList.remove('hidden');
   btnChiama.disabled = true;
   btnChiama.classList.add('opacity-40', 'cursor-not-allowed');
@@ -745,6 +770,24 @@ function aggiornaDial(asta, config, me, sonoIoInTesta) {
   btnRapido.classList.remove('opacity-40', 'cursor-not-allowed');
   progress.setAttribute('stroke', sonoIoInTesta ? '#10b981' : '#0ea5e9');
 
+  // Se l'utente sta trascinando il dial, blocca qualsiasi sovrascrittura da parte dei messaggi WebSocket
+  if (dialDragging) {
+    valoreStaged = Math.min(Math.max(valoreStaged, min), max);
+    const frac = Math.max(0, Math.min(1, (valoreStaged - min) / (max - min)));
+    aggiornaDialVisual(frac);
+    valoreTxt.textContent = valoreStaged;
+    btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
+    const offerenteTxt = document.getElementById('dialOfferenteTxt');
+    if (sonoIoInTesta) {
+      offerenteTxt.textContent = '\uD83C\uDF89 SEI IN TESTA';
+      offerenteTxt.setAttribute('fill', '#10b981');
+    } else {
+      offerenteTxt.textContent = asta.offerenteNome ? ('in testa: ' + asta.offerenteNome) : '';
+      offerenteTxt.setAttribute('fill', '#94a3b8');
+    }
+    return;
+  }
+
   if (ultimaOffertaVista !== asta.offertaCorrente) {
     ultimaOffertaVista = asta.offertaCorrente;
     // Lock: se l'utente ha selezionato un valore e la nuova offerta non lo supera, mantieni il valore selezionato
@@ -763,7 +806,7 @@ function aggiornaDial(asta, config, me, sonoIoInTesta) {
 
   const offerenteTxt = document.getElementById('dialOfferenteTxt');
   if (sonoIoInTesta) {
-    offerenteTxt.textContent = '\uD83C\uDFC6 SEI IN TESTA';
+      offerenteTxt.textContent = '\uD83C\uDF89 SEI IN TESTA';
     offerenteTxt.setAttribute('fill', '#10b981');
   } else {
     offerenteTxt.textContent = asta.offerenteNome ? ('in testa: ' + asta.offerenteNome) : '';

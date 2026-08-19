@@ -31,7 +31,7 @@
       <div class="text-2xl font-extrabold text-emerald-400 leading-tight" id="budgetLabel">0</div>
     </div>
     <div class="text-right flex items-center gap-3">
-      <span class="bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 tracking-wider">v2.0.6</span>
+      <span class="bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 tracking-wider">v2.0.7</span>
       <div>
         <div class="text-[11px] text-slate-500 leading-none">Fantasquadra</div>
         <div class="font-semibold leading-none" id="nomeLabel">-</div>
@@ -144,12 +144,9 @@
 
     <!-- Piatto asta -->
     <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center transition-all">
-      <div id="piattoVuoto" class="py-10 text-slate-500">
-        <div class="text-4xl mb-2">🕒</div>
-        <p>Nessun calciatore all'asta. Chiama il primo giocatore!</p>
-      </div>
+      <div id="piattoVuoto" class="hidden"></div>
 
-      <div id="piattoAttivo" class="hidden animate-pop">
+      <div id="piattoAttivo" class="animate-pop">
 
         <!-- 1: ruolo + nome + squadra -->
         <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
