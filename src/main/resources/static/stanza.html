@@ -31,7 +31,7 @@
       <div class="text-2xl font-extrabold text-emerald-400 leading-tight" id="budgetLabel">0</div>
     </div>
     <div class="text-right flex items-center gap-3">
-      <span class="bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 tracking-wider">v2.0.7</span>
+      <span class="bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 tracking-wider">v2.0.9</span>
       <div>
         <div class="text-[11px] text-slate-500 leading-none">Fantasquadra</div>
         <div class="font-semibold leading-none" id="nomeLabel">-</div>
@@ -143,9 +143,7 @@
     </form>
 
     <!-- Piatto asta -->
-    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center transition-all">
-      <div id="piattoVuoto" class="hidden"></div>
-
+    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 text-center transition-all" style="display:none;">
       <div id="piattoAttivo" class="animate-pop">
 
         <!-- 1: ruolo + nome + squadra -->
@@ -163,49 +161,42 @@
           </div>
         </div>
 
-        <!-- 3: CIRCULAR DIAL -->
-        <div id="dialWrap" class="relative mx-auto mb-2 select-none" style="width:100%;max-width:260px;aspect-ratio:1/1;">
-          <svg id="dialSvg" viewBox="0 0 260 260" class="w-full h-full">
-            <defs>
-              <filter id="dialGlow">
-                <feGaussianBlur stdDeviation="4" result="blur"/>
-                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-              </filter>
-            </defs>
-            <!-- bg track: 270° arc starting at 60° (5 o'clock) -->
-            <circle cx="130" cy="130" r="110" fill="none" stroke="#1e293b" stroke-width="14"
-                    stroke-dasharray="518 691" stroke-linecap="round"
-                    transform="rotate(60 130 130)"/>
-            <!-- progress arc -->
-            <circle id="dialProgress" cx="130" cy="130" r="110" fill="none" stroke="#0ea5e9" stroke-width="14"
-                    stroke-dasharray="0 691" stroke-linecap="round"
-                    transform="rotate(60 130 130)" filter="url(#dialGlow)"/>
-            <!-- center bg -->
-            <circle cx="130" cy="130" r="82" fill="#0f172a" stroke="#1e293b" stroke-width="2"/>
-            <!-- value -->
-            <text id="dialValoreTxt" x="130" y="122" text-anchor="middle" dominant-baseline="middle"
-                  fill="#f1f5f9" font-size="46" font-weight="900" font-family="monospace">1</text>
-            <text id="dialCreditoTxt" x="130" y="150" text-anchor="middle"
-                  fill="#94a3b8" font-size="12" font-weight="600">crediti</text>
-            <!-- offerente -->
-            <text id="dialOfferenteTxt" x="130" y="172" text-anchor="middle"
-                  fill="#10b981" font-size="11" font-weight="700"></text>
-          </svg>
-          <!-- handle -->
-          <div id="dialHandle" class="absolute w-8 h-8 -ml-4 -mt-4 rounded-full bg-sky-400 border-[3px] border-sky-900 shadow-[0_0_14px_rgba(14,165,233,0.5)] z-10 pointer-events-auto"></div>
+        <!-- 3: PREZZO ATTUALE + LEADER -->
+        <div class="mb-3">
+          <div class="text-[11px] text-slate-500 uppercase tracking-wide mb-1">Offerta attuale</div>
+          <div id="prezzoAttualeDisplay" class="text-4xl font-black text-emerald-400 font-mono leading-none mb-1">-</div>
+          <div class="text-xs text-slate-500 mb-1">crediti</div>
+          <div id="leaderDisplay" class="text-sm font-bold"></div>
         </div>
 
-        <!-- 4: RILANCIA +1 -->
-        <button id="btnRilancioRapido" class="mx-auto block bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold py-2.5 px-8 rounded-xl text-base transition mb-2">
+        <!-- 4: STEPPER -->
+        <div class="flex items-center justify-center gap-3 mb-3">
+          <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
+          <div id="stepperValueDisplay" class="text-5xl font-black text-white font-mono min-w-[90px] leading-none">-</div>
+          <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
+        </div>
+
+        <!-- 5: QUICK CHIPS -->
+        <div class="flex justify-center gap-2 mb-3 flex-wrap" id="quickChips">
+          <button class="chip-btn" data-delta="-10">−10</button>
+          <button class="chip-btn" data-delta="-5">−5</button>
+          <button class="chip-btn" data-delta="-1">−1</button>
+          <button class="chip-btn" data-delta="+1">+1</button>
+          <button class="chip-btn" data-delta="+5">+5</button>
+          <button class="chip-btn" data-delta="+10">+10</button>
+        </div>
+
+        <!-- 6: RILANCIA +1 -->
+        <button id="btnRilancioRapido" class="mx-auto block bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold py-3 px-10 rounded-xl text-lg transition mb-2">
           RILANCIA +1
         </button>
 
-        <!-- 5: CONFERMA RILANCIO -->
+        <!-- 7: CONFERMA RILANCIO -->
         <button id="btnConfermaDial" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 rounded-xl text-lg transition mb-2">
           CONFERMA RILANCIO
         </button>
 
-        <!-- 6: Offerta Automatica (compatto) -->
+        <!-- 8: Offerta Automatica (compatto) -->
         <div id="autoBidPanel" class="border-t border-slate-800 pt-2 mt-1">
           <div id="autoBidInactive" class="flex items-center gap-2">
             <span class="text-xs font-bold text-violet-400 whitespace-nowrap">🤖 Auto-bid</span>

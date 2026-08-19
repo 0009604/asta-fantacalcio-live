@@ -35,17 +35,10 @@ let autoBidOffertaPrecedente = null; // per rilevare quando qualcuno rilancia do
 let userHasSelectedValue = false; // lock: true quando l'utente ha impostato manualmente il dial
 let stuzzicaCooldownUntil = 0; // timestamp fino a cui il pulsante stuzzica è disabilitato
 
-// DIAL CONSTANTS
-const DIAL_CX = 130, DIAL_CY = 130, DIAL_R = 110;
-const DIAL_CIRC = 2 * Math.PI * DIAL_R;
-const DIAL_ARC_DEG = 270;
-const DIAL_ARC_LEN = DIAL_CIRC * (DIAL_ARC_DEG / 360);
-const DIAL_START_DEG = 60;
-let dialMin = 1, dialMax = 100;
-let dialDragging = false;
+let steppMin = 1, steppMax = 100;
 let astaAttivaPrecedente = false;
 
-// Reset totale dello stato dial a ogni nuova chiamata
+// Reset totale dello stato stepper a ogni nuova chiamata
 function resetDialState() {
   valoreStaged = 0;
   ultimaOffertaVista = null;
@@ -62,14 +55,12 @@ function resetDialState() {
   if (autoActive) { autoActive.classList.add('hidden'); autoActive.classList.remove('flex'); }
   var statusEl = document.getElementById('autoBidStatus');
   if (statusEl) statusEl.classList.add('hidden');
-  aggiornaDialVisual(0);
-  var handle = document.getElementById('dialHandle');
-  if (handle) {
-    handle.style.opacity = '0.3';
-    handle.style.pointerEvents = 'none';
-  }
-  var valoreTxt = document.getElementById('dialValoreTxt');
-  if (valoreTxt) valoreTxt.textContent = '1';
+  var sv = document.getElementById('stepperValueDisplay');
+  if (sv) sv.textContent = '1';
+  var pp = document.getElementById('prezzoAttualeDisplay');
+  if (pp) pp.textContent = '-';
+  var ld = document.getElementById('leaderDisplay');
+  if (ld) ld.textContent = '';
   var btnConf = document.getElementById('btnConfermaDial');
   if (btnConf) btnConf.textContent = 'CONFERMA RILANCIO';
 }
@@ -428,7 +419,7 @@ function renderPausa(inPausa, sonoAdmin) {
   formChiamata.querySelectorAll('input, select, button').forEach(el => el.disabled = inPausa);
   formChiamata.classList.toggle('opacity-50', inPausa);
 
-  ['btnRilancioRapido', 'btnConfermaDial'].forEach(id => {
+  ['btnRilancioRapido', 'btnConfermaDial', 'btnStepperMinus', 'btnStepperPlus'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.disabled = inPausa;
@@ -436,11 +427,11 @@ function renderPausa(inPausa, sonoAdmin) {
       el.classList.toggle('cursor-not-allowed', inPausa);
     }
   });
-  const dialHandle = document.getElementById('dialHandle');
-  if (dialHandle) {
-    dialHandle.style.pointerEvents = inPausa ? 'none' : 'auto';
-    dialHandle.classList.toggle('opacity-40', inPausa);
-  }
+  document.querySelectorAll('.chip-btn').forEach(el => {
+    el.disabled = inPausa;
+    el.classList.toggle('opacity-40', inPausa);
+    el.classList.toggle('cursor-not-allowed', inPausa);
+  });
 }
 
 function renderPartecipanti(partecipanti, adminNome, astaCorrente) {
@@ -622,16 +613,15 @@ function escapeAttr(str) {
 }
 
 function renderPiatto(asta, config, me) {
-  const attivo = document.getElementById('piattoAttivo');
+  const piatto = document.getElementById('piattoAsta');
   const btnChiama = document.getElementById('btnChiama');
 
   if (!asta || !asta.attiva) {
-    attivo.classList.add('hidden');
+    piatto.style.display = 'none';
     btnChiama.disabled = false;
     btnChiama.classList.remove('opacity-40', 'cursor-not-allowed');
     ultimoSecondoVibrato = null;
     autoBidOffertaPrecedente = null;
-    // exit focus mode
     if (astaAttivaPrecedente) {
       document.body.classList.remove('focus-asta');
       astaAttivaPrecedente = false;
@@ -639,7 +629,7 @@ function renderPiatto(asta, config, me) {
     return;
   }
 
-  attivo.classList.remove('hidden');
+  piatto.style.display = '';
   btnChiama.disabled = true;
   btnChiama.classList.add('opacity-40', 'cursor-not-allowed');
 
@@ -649,8 +639,7 @@ function renderPiatto(asta, config, me) {
     resetDialState();
     document.body.classList.add('focus-asta');
     setTimeout(() => {
-      var dw = document.getElementById('dialWrap');
-      if (dw) dw.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      piatto.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 120);
   }
 
@@ -693,7 +682,7 @@ function renderPiatto(asta, config, me) {
 
   const sonoIoInTesta = me && asta.offerenteNome && asta.offerenteNome.toLowerCase() === mioNome.toLowerCase();
 
-  aggiornaDial(asta, config, me, sonoIoInTesta);
+  aggiornaStepper(asta, config, me, sonoIoInTesta);
 }
 
 function calcolaOffertaMassima(me, config) {
@@ -708,89 +697,76 @@ function calcolaOffertaMassima(me, config) {
   return me.budgetResiduo - (slotLiberiTotali - 1);
 }
 
-// ---------------------------------------------------------------- DIAL HELPERS
-
-function dialFracToAngle(frac) {
-  return DIAL_START_DEG + frac * DIAL_ARC_DEG;
-}
-
-function dialFracToXY(frac) {
-  const rad = dialFracToAngle(frac) * Math.PI / 180;
-  return { x: DIAL_CX + DIAL_R * Math.cos(rad), y: DIAL_CY + DIAL_R * Math.sin(rad) };
-}
-
-function aggiornaDialVisual(frac) {
-  const progress = document.getElementById('dialProgress');
-  const handle = document.getElementById('dialHandle');
-  const arcLen = Math.max(0, frac * DIAL_ARC_LEN);
-  progress.setAttribute('stroke-dasharray', arcLen + ' ' + DIAL_CIRC);
-  const pos = dialFracToXY(frac);
-  const wrap = document.getElementById('dialWrap');
-  const vw = wrap.offsetWidth, vh = wrap.offsetHeight;
-  handle.style.left = (pos.x / 260 * vw) + 'px';
-  handle.style.top = (pos.y / 260 * vh) + 'px';
-}
-
-function aggiornaDial(asta, config, me, sonoIoInTesta) {
+function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   const min = asta.offertaCorrente + 1;
   const max = calcolaOffertaMassima(me, config);
-  dialMin = min;
-  dialMax = max;
+  steppMin = min;
+  steppMax = max;
 
   const slotUsatiRuolo = (me && me.rosa[asta.ruolo]) ? me.rosa[asta.ruolo].length : 0;
   const slotTotaliRuolo = config[SLOT_CONFIG_KEY[asta.ruolo]];
   const haSlotLiberi = slotTotaliRuolo - slotUsatiRuolo > 0;
   const disabilitato = !!sonoIoInTesta || !haSlotLiberi || max < min;
 
-  const handle = document.getElementById('dialHandle');
+  const svEl = document.getElementById('stepperValueDisplay');
+  const ppEl = document.getElementById('prezzoAttualeDisplay');
+  const ldEl = document.getElementById('leaderDisplay');
   const btnConf = document.getElementById('btnConfermaDial');
   const btnRapido = document.getElementById('btnRilancioRapido');
-  const valoreTxt = document.getElementById('dialValoreTxt');
-  const progress = document.getElementById('dialProgress');
+  const btnMinus = document.getElementById('btnStepperMinus');
+  const btnPlus = document.getElementById('btnStepperPlus');
+  const chips = document.querySelectorAll('.chip-btn');
 
   if (disabilitato) {
-    handle.style.opacity = '0.3';
-    handle.style.pointerEvents = 'none';
     btnConf.disabled = true;
     btnConf.classList.add('opacity-40', 'cursor-not-allowed');
     btnRapido.disabled = true;
     btnRapido.classList.add('opacity-40', 'cursor-not-allowed');
-    valoreTxt.textContent = '\u2014';
-    aggiornaDialVisual(0);
-    progress.setAttribute('stroke', '#475569');
-    document.getElementById('dialOfferenteTxt').textContent = !haSlotLiberi ? 'ruolo pieno' : (max < min ? 'budget insufficiente' : '');
-    return;
-  }
-
-  handle.style.opacity = '1';
-  handle.style.pointerEvents = 'auto';
-  btnConf.disabled = false;
-  btnConf.classList.remove('opacity-40', 'cursor-not-allowed');
-  btnRapido.disabled = false;
-  btnRapido.classList.remove('opacity-40', 'cursor-not-allowed');
-  progress.setAttribute('stroke', sonoIoInTesta ? '#10b981' : '#0ea5e9');
-
-  // Se l'utente sta trascinando il dial, blocca qualsiasi sovrascrittura da parte dei messaggi WebSocket
-  if (dialDragging) {
-    valoreStaged = Math.min(Math.max(valoreStaged, min), max);
-    const frac = Math.max(0, Math.min(1, (valoreStaged - min) / (max - min)));
-    aggiornaDialVisual(frac);
-    valoreTxt.textContent = valoreStaged;
-    btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
-    const offerenteTxt = document.getElementById('dialOfferenteTxt');
-    if (sonoIoInTesta) {
-      offerenteTxt.textContent = '\uD83C\uDF89 SEI IN TESTA';
-      offerenteTxt.setAttribute('fill', '#10b981');
+    btnMinus.disabled = true;
+    btnMinus.classList.add('opacity-40', 'cursor-not-allowed');
+    btnPlus.disabled = true;
+    btnPlus.classList.add('opacity-40', 'cursor-not-allowed');
+    chips.forEach(c => { c.disabled = true; c.classList.add('opacity-40', 'cursor-not-allowed'); });
+    svEl.textContent = '—';
+    svEl.className = 'text-5xl font-black text-slate-500 font-mono min-w-[90px] leading-none';
+    ppEl.textContent = asta.offertaCorrente || '—';
+    if (!haSlotLiberi) {
+      ldEl.textContent = 'ruolo pieno';
+      ldEl.className = 'text-sm font-bold text-rose-400';
+    } else if (max < min) {
+      ldEl.textContent = 'budget insufficiente';
+      ldEl.className = 'text-sm font-bold text-rose-400';
     } else {
-      offerenteTxt.textContent = asta.offerenteNome ? ('in testa: ' + asta.offerenteNome) : '';
-      offerenteTxt.setAttribute('fill', '#94a3b8');
+      ldEl.textContent = '';
     }
     return;
   }
 
+  btnConf.disabled = false;
+  btnConf.classList.remove('opacity-40', 'cursor-not-allowed');
+  btnRapido.disabled = false;
+  btnRapido.classList.remove('opacity-40', 'cursor-not-allowed');
+  btnMinus.disabled = false;
+  btnMinus.classList.remove('opacity-40', 'cursor-not-allowed');
+  btnPlus.disabled = false;
+  btnPlus.classList.remove('opacity-40', 'cursor-not-allowed');
+  chips.forEach(c => { c.disabled = false; c.classList.remove('opacity-40', 'cursor-not-allowed'); });
+
+  // Update prezzo attuale
+  ppEl.textContent = asta.offertaCorrente;
+  ppEl.className = 'text-4xl font-black font-mono leading-none mb-1 ' + (sonoIoInTesta ? 'text-emerald-400' : 'text-slate-200');
+
+  // Update leader
+  if (sonoIoInTesta) {
+    ldEl.textContent = 'Sei in testa! \uD83C\uDF89';
+    ldEl.className = 'text-sm font-bold text-emerald-400';
+  } else {
+    ldEl.textContent = asta.offerenteNome ? ('In testa: ' + asta.offerenteNome) : '';
+    ldEl.className = 'text-sm font-bold text-slate-400';
+  }
+
   if (ultimaOffertaVista !== asta.offertaCorrente) {
     ultimaOffertaVista = asta.offertaCorrente;
-    // Lock: se l'utente ha selezionato un valore e la nuova offerta non lo supera, mantieni il valore selezionato
     if (!userHasSelectedValue || asta.offertaCorrente >= valoreStaged) {
       valoreStaged = min;
       userHasSelectedValue = false;
@@ -798,20 +774,14 @@ function aggiornaDial(asta, config, me, sonoIoInTesta) {
   }
   valoreStaged = Math.min(Math.max(valoreStaged, min), max);
 
-  const frac = Math.max(0, Math.min(1, (valoreStaged - min) / (max - min)));
-  aggiornaDialVisual(frac);
-
-  valoreTxt.textContent = valoreStaged;
+  svEl.textContent = valoreStaged;
+  svEl.className = 'text-5xl font-black text-white font-mono min-w-[90px] leading-none';
   btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
 
-  const offerenteTxt = document.getElementById('dialOfferenteTxt');
-  if (sonoIoInTesta) {
-      offerenteTxt.textContent = '\uD83C\uDF89 SEI IN TESTA';
-    offerenteTxt.setAttribute('fill', '#10b981');
-  } else {
-    offerenteTxt.textContent = asta.offerenteNome ? ('in testa: ' + asta.offerenteNome) : '';
-    offerenteTxt.setAttribute('fill', '#94a3b8');
-  }
+  btnMinus.disabled = valoreStaged <= min;
+  btnMinus.classList.toggle('opacity-40', valoreStaged <= min);
+  btnPlus.disabled = valoreStaged >= max;
+  btnPlus.classList.toggle('opacity-40', valoreStaged >= max);
 }
 
 // ---------------------------------------------------------------- CALCOLO TETTO SICUREZZA
@@ -918,72 +888,30 @@ document.getElementById('btnRilancioRapido').addEventListener('click', () => {
   });
 });
 
-// ---------------------------------------------------------------- DIAL INTERACTION
+// ---------------------------------------------------------------- STEPPER INTERACTION
 
-(function initDial() {
-  const wrap = document.getElementById('dialWrap');
-  if (!wrap) return;
+function applyStepperDelta(delta) {
+  const min = steppMin, max = steppMax;
+  if (max < min) return;
+  valoreStaged = Math.min(Math.max(valoreStaged + delta, min), max);
+  userHasSelectedValue = true;
+  document.getElementById('stepperValueDisplay').textContent = valoreStaged;
+  document.getElementById('btnConfermaDial').textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
+  document.getElementById('btnStepperMinus').disabled = valoreStaged <= min;
+  document.getElementById('btnStepperMinus').classList.toggle('opacity-40', valoreStaged <= min);
+  document.getElementById('btnStepperPlus').disabled = valoreStaged >= max;
+  document.getElementById('btnStepperPlus').classList.toggle('opacity-40', valoreStaged >= max);
+}
 
-  function handleInput(clientX, clientY) {
-    const rect = wrap.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    let deg = Math.atan2(clientY - cy, clientX - cx) * 180 / Math.PI;
-    if (deg < 0) deg += 360;
+document.getElementById('btnStepperMinus').addEventListener('click', () => applyStepperDelta(-1));
+document.getElementById('btnStepperPlus').addEventListener('click', () => applyStepperDelta(1));
 
-    let rel = deg - DIAL_START_DEG;
-    if (rel < 0) rel += 360;
-    if (rel > DIAL_ARC_DEG) return;
-
-    const min = dialMin, max = dialMax;
-    if (max < min) return;
-
-    const frac = rel / DIAL_ARC_DEG;
-    valoreStaged = Math.round(min + frac * (max - min));
-    valoreStaged = Math.min(Math.max(valoreStaged, min), max);
-    userHasSelectedValue = true;
-
-    aggiornaDialVisual(frac);
-    document.getElementById('dialValoreTxt').textContent = valoreStaged;
-    document.getElementById('btnConfermaDial').textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
-  }
-
-  function isNearHandle(clientX, clientY) {
-    const handle = document.getElementById('dialHandle');
-    if (!handle) return false;
-    const hRect = handle.getBoundingClientRect();
-    const hx = hRect.left + hRect.width / 2;
-    const hy = hRect.top + hRect.height / 2;
-    const dist = Math.hypot(clientX - hx, clientY - hy);
-    return dist <= 35;
-  }
-
-  wrap.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    if (!isNearHandle(e.clientX, e.clientY)) return;
-    dialDragging = true;
-    handleInput(e.clientX, e.clientY);
-    const onMove = (ev) => { if (dialDragging) handleInput(ev.clientX, ev.clientY); };
-    const onUp = () => { dialDragging = false; document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+document.querySelectorAll('.chip-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const delta = parseInt(btn.dataset.delta, 10);
+    if (!isNaN(delta)) applyStepperDelta(delta);
   });
-
-  wrap.addEventListener('touchstart', (e) => {
-    if (!e.touches[0]) return;
-    if (!isNearHandle(e.touches[0].clientX, e.touches[0].clientY)) return;
-    e.preventDefault();
-    dialDragging = true;
-    handleInput(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: false });
-
-  wrap.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    if (dialDragging && e.touches[0]) handleInput(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: false });
-
-  wrap.addEventListener('touchend', () => { dialDragging = false; });
-})();
+});
 
 document.getElementById('btnConfermaDial').addEventListener('click', () => {
   if (!valoreStaged) return;

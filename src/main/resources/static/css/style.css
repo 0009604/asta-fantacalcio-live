@@ -133,26 +133,69 @@ button, [type="submit"] {
   transition: width 1s linear, background-color 0.3s ease;
 }
 
-/* ── Circular Dial ──────────────────────────────── */
-#dialWrap {
-  cursor: crosshair;
-  touch-action: none;
+/* ── Stepper + Quick Chips ───────────────────────── */
+#stepperValueDisplay {
+  text-shadow: 0 0 20px rgba(255,255,255,0.15);
 }
 
-#dialWrap svg {
-  filter: drop-shadow(0 4px 20px rgba(0,0,0,0.3));
+.stepper-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 1rem !important;
+  font-size: 1.5rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(255,255,255,0.2) !important;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+.stepper-btn-minus {
+  background: rgba(239,68,68,0.12);
+  color: #fca5a5;
+}
+.stepper-btn-minus:hover:not(:disabled) {
+  background: rgba(239,68,68,0.25);
+  box-shadow: 0 0 12px rgba(239,68,68,0.3);
+}
+.stepper-btn-plus {
+  background: rgba(34,197,94,0.12);
+  color: #86efac;
+}
+.stepper-btn-plus:hover:not(:disabled) {
+  background: rgba(34,197,94,0.25);
+  box-shadow: 0 0 12px rgba(34,197,94,0.3);
+}
+.stepper-btn:active:not(:disabled) {
+  transform: scale(0.92);
 }
 
-#dialHandle {
-  transition: opacity 0.2s ease, box-shadow 0.3s ease;
+.chip-btn {
+  min-width: 48px;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.625rem !important;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: monospace;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  background: rgba(255,255,255,0.06);
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
 }
-#dialHandle:active {
-  box-shadow: 0 0 20px rgba(14,165,233,0.8), 0 0 40px rgba(14,165,233,0.3);
-  transform: scale(1.15);
+.chip-btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.3) !important;
+  transform: scale(1.06);
+  box-shadow: 0 0 8px rgba(14,165,233,0.25);
 }
-
-#dialProgress {
-  transition: stroke-dasharray 0.12s ease-out, stroke 0.3s ease;
+.chip-btn:active:not(:disabled) {
+  transform: scale(0.94);
 }
 
 /* ── Cards / Panels — glassmorphism & shadows ───── */
@@ -345,13 +388,6 @@ main, main > section, main > aside {
   box-sizing: border-box;
 }
 
-#dialWrap {
-  width: 100% !important;
-  max-width: 260px;
-  height: auto !important;
-  aspect-ratio: 1 / 1;
-}
-
 #piattoAsta, #formChiamata, #autoBidPanel {
   max-width: 100%;
   overflow-x: hidden;
@@ -380,9 +416,6 @@ body.focus-asta #piattoAsta {
 }
 
 @media (max-width: 430px) {
-  #dialWrap {
-    max-width: 220px;
-  }
   #piattoAsta {
     padding: 1rem 0.75rem;
   }
@@ -394,12 +427,22 @@ body.focus-asta #piattoAsta {
     min-height: 44px;
     font-size: 0.95rem;
   }
+  .stepper-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
+  }
+  #stepperValueDisplay {
+    font-size: 2.75rem;
+  }
+  .chip-btn {
+    min-width: 42px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
 }
 
 @media (max-width: 360px) {
-  #dialWrap {
-    max-width: 200px;
-  }
   main > section {
     padding-left: 0;
     padding-right: 0;
