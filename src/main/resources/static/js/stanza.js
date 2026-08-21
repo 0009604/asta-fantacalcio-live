@@ -49,34 +49,30 @@ const RUOLO_INFO = Object.fromEntries(RUOLI.map(r => [r.key, r]));
 const SLOT_CONFIG_KEY = { PORTIERE: 'slotPortieri', DIFENSORE: 'slotDifensori', CENTROCAMPISTA: 'slotCentrocampisti', ATTACCANTE: 'slotAttaccanti' };
 
 let ultimoStato = null;
-let listinoSelezionato = null; // { nome, ruolo, squadra } se l'utente ha scelto un suggerimento
-let valoreStaged = null;       // valore attualmente impostato sullo slider di rilancio
-let ultimaOffertaVista = null; // per capire quando resettare lo slider (nuova offerta altrui)
-let ultimoSecondoVibrato = null; // per non far vibrare più volte lo stesso secondo
-let ultimoEventoAggiudicazioneVincitore = null; // per triggerare confetti solo al vincitore
-let userHasSelectedValue = false; // lock: true quando l'utente ha impostato manualmente il dial
-let stuzzicaCooldownUntil = 0; // timestamp fino a cui il pulsante stuzzica è disabilitato
+let listinoSelezionato = null;
+let valoreStaged = null;
+let ultimaOffertaVista = null;
+let ultimoSecondoVibrato = null;
+let userHasSelectedValue = false;
+let stuzzicaCooldownUntil = 0;
 
 let steppMin = 1, steppMax = 100;
 let astaAttivaPrecedente = false;
 
-// Reset totale dello stato stepper a ogni nuova chiamata
 function resetDialState() {
   valoreStaged = 0;
   ultimaOffertaVista = null;
-  userHasSelectedValue = null;
+  userHasSelectedValue = false;
   ultimoSecondoVibrato = null;
-  var sv = document.getElementById('stepperValueDisplay');
+  const sv = document.getElementById('stepperValueDisplay');
   if (sv) sv.textContent = '1';
-  var pp = document.getElementById('prezzoAttualeDisplay');
+  const pp = document.getElementById('prezzoAttualeDisplay');
   if (pp) pp.textContent = '-';
-  var ld = document.getElementById('leaderDisplay');
+  const ld = document.getElementById('leaderDisplay');
   if (ld) ld.textContent = '';
-  var btnConf = document.getElementById('btnConfermaDial');
-  if (btnConf) btnConf.textContent = 'CONFERMA RILANCIO';
 }
 
-// ---------------------------------------------------------------- AUDIO (beep locale, solo su azione propria)
+// ---------------------------------------------------------------- AUDIO
 
 let audioCtx = null;
 function beep() {
@@ -91,10 +87,8 @@ function beep() {
     o.connect(g).connect(audioCtx.destination);
     o.start();
     o.stop(audioCtx.currentTime + 0.35);
-  } catch (e) { /* audio non disponibile, ignora */ }
+  } catch (e) { /* ignora */ }
 }
-
-// ---------------------------------------------------------------- AUDIO CASH (rilancio pesante)
 
 const cashAudio = new Audio('/audio/cash.mp3');
 cashAudio.volume = 0.45;
@@ -112,7 +106,7 @@ function lanciaConfetti() {
   const overlay = document.getElementById('confettiOverlay');
   overlay.innerHTML = '';
   overlay.classList.remove('active', 'hidden');
-  void overlay.offsetWidth; // force reflow per riattivare l'animazione
+  void overlay.offsetWidth;
   overlay.classList.add('active');
 
   const emoji = ['🏆', '🎉', '⚽', '🍾', '✨', '🎊', '🥇', '🎆'];
@@ -143,7 +137,7 @@ const inputNome = document.getElementById('inputNomeCalciatore');
 const listaSuggerimenti = document.getElementById('listaSuggerimenti');
 
 inputNome.addEventListener('input', () => {
-  listinoSelezionato = null; // l'utente sta digitando di nuovo, il suggerimento precedente non è più valido
+  listinoSelezionato = null;
   const query = inputNome.value.trim();
   clearTimeout(timeoutRicerca);
   if (query.length < 2) {
@@ -154,7 +148,6 @@ inputNome.addEventListener('input', () => {
 });
 
 inputNome.addEventListener('blur', () => {
-  // piccolo ritardo per permettere al click sul suggerimento di registrarsi prima di nascondere
   setTimeout(nascondiSuggerimenti, 150);
 });
 
@@ -164,7 +157,7 @@ async function cercaListino(query) {
     if (!res.ok) return;
     const risultati = await res.json();
     mostraSuggerimenti(risultati);
-  } catch (e) { /* listino non raggiungibile, l'utente può comunque scrivere a mano */ }
+  } catch (e) {}
 }
 
 function mostraSuggerimenti(risultati) {
@@ -185,7 +178,7 @@ function mostraSuggerimenti(risultati) {
       </span>
     `;
     li.addEventListener('mousedown', (e) => {
-      e.preventDefault(); // evita che il blur dell'input scatti prima del click
+      e.preventDefault();
       inputNome.value = g.nome;
       document.getElementById('selectRuolo').value = g.ruolo;
       listinoSelezionato = g;
@@ -226,7 +219,7 @@ document.getElementById('btnRicaricaListino').addEventListener('click', async ()
   el.className = 'text-xs text-slate-400 mb-2';
   try {
     await fetch('/api/listino/ricarica', { method: 'POST' });
-  } catch (e) { /* ignora, aggiornaStatoListino mostrerà l'errore */ }
+  } catch (e) {}
   aggiornaStatoListino();
 });
 
@@ -279,7 +272,7 @@ function salvaBackupRicevuto(backup) {
       el.textContent = '✅ ultimo backup: ' + hh + ':' + mm + ':' + ss;
       el.className = 'text-xs text-emerald-400 mb-2';
     }
-  } catch (e) { /* storage pieno o non disponibile, non è grave */ }
+  } catch (e) {}
 }
 
 document.getElementById('btnScaricaBackup').addEventListener('click', () => {
@@ -311,7 +304,7 @@ function inviaBackupAlServer() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ultimoStato)
     }).catch(() => {});
-  } catch (e) { /* ignora */ }
+  } catch (e) {}
 }
 
 setInterval(inviaBackupAlServer, 60000);
@@ -370,13 +363,10 @@ const stompClient = new StompJs.Client({
 
 stompClient.onConnect = () => {
   document.getElementById('dotConnessione').className = 'w-2 h-2 rounded-full bg-emerald-400 ml-1';
-  // coda privata: qui arriva solo lo stato personalizzato per questo utente
-  // (budget e rose degli altri partecipanti non ci vengono nemmeno inviati)
   stompClient.subscribe('/user/queue/stato', (msg) => {
     const dto = JSON.parse(msg.body);
     renderStato(dto);
   });
-  // backup automatico ogni 60s, arriva solo se sei l'admin della stanza
   stompClient.subscribe('/user/queue/backup', (msg) => {
     const backup = JSON.parse(msg.body);
     salvaBackupRicevuto(backup);
@@ -455,7 +445,6 @@ function renderPausa(inPausa, sonoAdmin) {
       : 'w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-lg text-sm mb-3';
   }
 
-  // durante la pausa, blocca chiamate e rilanci per tutti
   const formChiamata = document.getElementById('formChiamata');
   formChiamata.querySelectorAll('input, select, button').forEach(el => el.disabled = inPausa);
   formChiamata.classList.toggle('opacity-50', inPausa);
@@ -668,20 +657,17 @@ function renderPiatto(asta, config, me) {
   btnChiama.disabled = true;
   btnChiama.classList.add('opacity-40', 'cursor-not-allowed');
 
-  // enter focus mode on transition
+  // Modalità focus: attiva layout centrato a schermo intero
   if (!astaAttivaPrecedente) {
     astaAttivaPrecedente = true;
     resetDialState();
     document.body.classList.add('focus-asta');
-    setTimeout(() => {
-      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-    }, 100);
   }
 
   const info = RUOLO_INFO[asta.ruolo];
   const badge = document.getElementById('badgeRuolo');
   badge.textContent = info.short + ' · ' + capitalize(asta.ruolo);
-  badge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ' + info.color;
+  badge.className = 'text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ' + info.color;
 
   document.getElementById('nomeCalciatoreCorrente').textContent = asta.calciatoreNome;
   document.getElementById('squadraCalciatore').textContent = asta.squadra ? '(' + asta.squadra + ')' : '';
@@ -690,11 +676,11 @@ function renderPiatto(asta, config, me) {
   const frazione = Math.max(0, Math.min(1, asta.secondiRimanenti / totale));
   let coloreTimer;
   if (frazione > 0.5) {
-    coloreTimer = '#10b981'; // verde: >50%
+    coloreTimer = '#10b981';
   } else if (frazione > 0.25) {
-    coloreTimer = '#f59e0b'; // arancione: 25%-50%
+    coloreTimer = '#f59e0b';
   } else {
-    coloreTimer = '#dc2626'; // rosso: <25%
+    coloreTimer = '#dc2626';
   }
 
   const secondiLabel = document.getElementById('secondiLabel');
@@ -705,7 +691,6 @@ function renderPiatto(asta, config, me) {
   barra.style.width = (frazione * 100).toFixed(1) + '%';
   barra.style.background = coloreTimer;
 
-  // vibrazione negli ultimi 3 secondi (solo Android/Chrome: iOS Safari non supporta l'API)
   if (asta.secondiRimanenti <= 3 && asta.secondiRimanenti >= 1) {
     if (asta.secondiRimanenti !== ultimoSecondoVibrato) {
       ultimoSecondoVibrato = asta.secondiRimanenti;
@@ -751,17 +736,16 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   const btnPlus = document.getElementById('btnStepperPlus');
   const biddingBox = document.getElementById('biddingControls');
 
-  // --- SEI IN TESTA: nascondi controlli, mostra solo leader grande ---
+  // --- SEI IN TESTA ---
   if (sonoIoInTesta) {
     biddingBox.style.display = 'none';
     ppEl.textContent = asta.offertaCorrente;
-    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-emerald-400';
-    ldEl.textContent = 'Sei in testa! \uD83C\uDF89';
-    ldEl.className = 'text-lg font-extrabold text-emerald-400';
+    ldEl.textContent = '🎉 Sei in testa!';
+    ldEl.className = 'text-lg font-black text-emerald-400';
     return;
   }
 
-  // --- NON sei in testa: mostra controlli ---
+  // --- NON SEI IN TESTA ---
   biddingBox.style.display = '';
 
   const disabilitato = !haSlotLiberi || max < min;
@@ -776,15 +760,13 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
     btnPlus.disabled = true;
     btnPlus.classList.add('opacity-40', 'cursor-not-allowed');
     svEl.textContent = '—';
-    svEl.className = 'text-4xl font-black text-slate-500 font-mono min-w-[80px] leading-none';
     ppEl.textContent = asta.offertaCorrente || '—';
-    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-slate-200';
     if (!haSlotLiberi) {
-      ldEl.textContent = 'ruolo pieno';
-      ldEl.className = 'text-sm font-bold text-rose-400';
+      ldEl.textContent = 'Ruolo pieno';
+      ldEl.className = 'text-base font-bold text-rose-400';
     } else if (max < min) {
-      ldEl.textContent = 'budget insufficiente';
-      ldEl.className = 'text-sm font-bold text-rose-400';
+      ldEl.textContent = 'Budget insufficiente';
+      ldEl.className = 'text-base font-bold text-rose-400';
     } else {
       ldEl.textContent = '';
     }
@@ -793,160 +775,4 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
 
   btnConf.disabled = false;
   btnConf.classList.remove('opacity-40', 'cursor-not-allowed');
-  btnRapido.disabled = false;
-  btnRapido.classList.remove('opacity-40', 'cursor-not-allowed');
-  btnMinus.disabled = false;
-  btnMinus.classList.remove('opacity-40', 'cursor-not-allowed');
-  btnPlus.disabled = false;
-  btnPlus.classList.remove('opacity-40', 'cursor-not-allowed');
-
-  ppEl.textContent = asta.offertaCorrente;
-  ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-slate-200';
-  ldEl.textContent = asta.offerenteNome ? ('In testa: ' + asta.offerenteNome) : '';
-  ldEl.className = 'text-sm font-bold text-slate-400';
-
-  // Persistenza: blocca sovrascrittura finché l'utente non conferma
-  // o finché l'offerta al tavolo non supera il valore selezionato
-  if (ultimaOffertaVista !== asta.offertaCorrente) {
-    ultimaOffertaVista = asta.offertaCorrente;
-    if (!userHasSelectedValue || asta.offertaCorrente >= valoreStaged) {
-      valoreStaged = min;
-      userHasSelectedValue = false;
-    }
-  }
-  valoreStaged = Math.min(Math.max(valoreStaged, min), max);
-
-  svEl.textContent = valoreStaged;
-  svEl.className = 'text-4xl font-black text-white font-mono min-w-[80px] leading-none';
-  btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
-
-  btnMinus.disabled = valoreStaged <= min;
-  btnMinus.classList.toggle('opacity-40', valoreStaged <= min);
-  btnPlus.disabled = valoreStaged >= max;
-  btnPlus.classList.toggle('opacity-40', valoreStaged >= max);
-}
-
-// ---------------------------------------------------------------- AZIONI
-
-document.getElementById('formChiamata').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const nomeCalciatore = document.getElementById('inputNomeCalciatore').value.trim();
-  const ruolo = document.getElementById('selectRuolo').value;
-  const prezzoBase = parseInt(document.getElementById('inputPrezzoBase').value || '1', 10);
-  if (!nomeCalciatore) return;
-
-  beep();
-  stompClient.publish({
-    destination: `/app/stanza/${codiceStanza}/chiamata`,
-    body: JSON.stringify({ nomeCalciatore, ruolo, prezzoBase })
-  });
-  document.getElementById('inputNomeCalciatore').value = '';
-  document.getElementById('inputPrezzoBase').value = 1;
-  listinoSelezionato = null;
-  nascondiSuggerimenti();
-});
-
-document.getElementById('btnRilancioRapido').addEventListener('click', () => {
-  beep();
-  stompClient.publish({
-    destination: '/app/stanza/' + codiceStanza + '/rilancio',
-    body: JSON.stringify({ importo: null })
-  });
-});
-
-// ---------------------------------------------------------------- STEPPER INTERACTION
-
-function applyStepperDelta(delta) {
-  const min = steppMin, max = steppMax;
-  if (max < min) return;
-  valoreStaged = Math.min(Math.max(valoreStaged + delta, min), max);
-  userHasSelectedValue = true;
-  document.getElementById('stepperValueDisplay').textContent = valoreStaged;
-  document.getElementById('btnConfermaDial').textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
-  document.getElementById('btnStepperMinus').disabled = valoreStaged <= min;
-  document.getElementById('btnStepperMinus').classList.toggle('opacity-40', valoreStaged <= min);
-  document.getElementById('btnStepperPlus').disabled = valoreStaged >= max;
-  document.getElementById('btnStepperPlus').classList.toggle('opacity-40', valoreStaged >= max);
-}
-
-function startLongPress(delta) {
-  applyStepperDelta(delta);
-  longPressInterval = setInterval(() => applyStepperDelta(delta), 80);
-}
-
-function stopLongPress() {
-  if (longPressInterval) { clearInterval(longPressInterval); longPressInterval = null; }
-}
-
-let longPressInterval = null;
-
-(function initStepperLongPress() {
-  const btnMinus = document.getElementById('btnStepperMinus');
-  const btnPlus = document.getElementById('btnStepperPlus');
-
-  btnMinus.addEventListener('mousedown', () => { if (!btnMinus.disabled) startLongPress(-1); });
-  btnMinus.addEventListener('mouseup', stopLongPress);
-  btnMinus.addEventListener('mouseleave', stopLongPress);
-  btnMinus.addEventListener('touchstart', (e) => { if (!btnMinus.disabled) { e.preventDefault(); startLongPress(-1); } }, { passive: false });
-  btnMinus.addEventListener('touchend', stopLongPress);
-  btnMinus.addEventListener('touchcancel', stopLongPress);
-
-  btnPlus.addEventListener('mousedown', () => { if (!btnPlus.disabled) startLongPress(1); });
-  btnPlus.addEventListener('mouseup', stopLongPress);
-  btnPlus.addEventListener('mouseleave', stopLongPress);
-  btnPlus.addEventListener('touchstart', (e) => { if (!btnPlus.disabled) { e.preventDefault(); startLongPress(1); } }, { passive: false });
-  btnPlus.addEventListener('touchend', stopLongPress);
-  btnPlus.addEventListener('touchcancel', stopLongPress);
-})();
-
-document.getElementById('btnConfermaDial').addEventListener('click', () => {
-  if (!valoreStaged) return;
-  beep();
-  userHasSelectedValue = false;
-  stompClient.publish({
-    destination: '/app/stanza/' + codiceStanza + '/rilancio',
-    body: JSON.stringify({ importo: valoreStaged })
-  });
-});
-
-document.getElementById('btnTimerSalva').addEventListener('click', () => {
-  const secondi = parseInt(document.getElementById('timerInput').value, 10);
-  if (!secondi) return;
-  stompClient.publish({
-    destination: `/app/stanza/${codiceStanza}/timer`,
-    body: JSON.stringify({ secondi })
-  });
-});
-
-document.getElementById('btnTogglePausa').addEventListener('click', () => {
-  const inPausaOra = ultimoStato && ultimoStato.inPausa;
-  stompClient.publish({
-    destination: `/app/stanza/${codiceStanza}/pausa`,
-    body: JSON.stringify({ pausa: !inPausaOra })
-  });
-});
-
-document.getElementById('btnScaricaMiaJson').addEventListener('click', () => {
-  window.location.href = `/api/stanze/${codiceStanza}/rosa?nome=${encodeURIComponent(mioNome)}&formato=json`;
-});
-document.getElementById('btnScaricaMiaTxt').addEventListener('click', () => {
-  window.location.href = `/api/stanze/${codiceStanza}/rosa?nome=${encodeURIComponent(mioNome)}&formato=txt`;
-});
-document.getElementById('btnScaricaTutteJson').addEventListener('click', () => {
-  window.location.href = `/api/stanze/${codiceStanza}/rosa-tutte?nomeRichiedente=${encodeURIComponent(mioNome)}&formato=json`;
-});
-document.getElementById('btnScaricaTutteTxt').addEventListener('click', () => {
-  window.location.href = `/api/stanze/${codiceStanza}/rosa-tutte?nomeRichiedente=${encodeURIComponent(mioNome)}&formato=txt`;
-});
-
-// ---------------------------------------------------------------- UTIL
-
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function capitalize(str) {
-  return str.charAt(0) + str.slice(1).toLowerCase();
-}
+  btnRapido.disa
