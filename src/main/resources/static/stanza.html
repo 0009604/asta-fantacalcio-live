@@ -1,58 +1,229 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stanza Asta</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="js/stanza.js" defer></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Stanza Asta · Fantacalcio Live</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-    <!-- Inizio struttura completa -->
+<body class="min-h-screen bg-slate-950 text-slate-100">
 
-    <!-- Blocco tavolo d'asta con correzioni al layout del `piattoAsta` -->
-    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center transition-all" style="display:none;">
-        <div id="piattoAttivo" class="animate-pop space-y-3">
-            <!-- Ruolo, Nome, Squadra -->
-            <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
-                <span id="badgeRuolo" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
-                <h2 id="nomeCalciatoreCorrente" class="text-xl font-extrabold">-</h2>
-                <span id="squadraCalciatore" class="text-xs text-slate-500"></span>
-            </div>
+<!-- SPLASH INTRO -->
+<div id="splashIntro" class="fixed inset-0 bg-black z-[999999] flex items-center justify-center" style="display:none;">
+  <video id="introVideo" src="assets/introAPP.mp4" autoplay muted playsinline class="w-full max-h-[100vh] object-contain"></video>
+  <button id="skipIntroBtn" class="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white text-xs font-semibold px-3 py-1.5 rounded-full backdrop-blur transition">Salta ✕</button>
+</div>
 
-            <!-- Timer barra -->
-            <div id="wrapperBarraTimer" class="w-full bg-slate-800 rounded-full overflow-hidden">
-                <div id="barraTimer" class="rounded-full h-3" style="width:100%; background:#b45309; transition:width 1s linear, background-color 0.3s ease;"></div>
-            </div>
+<!-- TOAST EVENTI -->
+<div id="toastArea" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none"></div>
 
-            <!-- Offerta attuale -->
-            <div class="my-3">
-                <div class="inline-block bg-white/85 rounded-xl px-4 py-2">
-                    <div class="text-[11px] text-slate-600 uppercase tracking-wide">Offerta attuale</div>
-                    <div id="prezzoAttualeDisplay" class="text-4xl font-black text-emerald-900 font-mono leading-none">-</div>
-                </div>
-            </div>
+<!-- CONFETTI OVERLAY -->
+<div id="confettiOverlay" class="fixed inset-0 pointer-events-none z-[9999] hidden"></div>
 
-            <!-- Chi è in testa -->
-            <div id="leaderDisplay" class="text-base font-bold mb-4"></div>
+<!-- HEADER -->
+<header id="appHeader" class="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+  <div class="max-w-6xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
+      <span class="text-xl">⚽</span>
+      <div>
+        <div class="text-[11px] text-slate-500 leading-none">Stanza</div>
+        <div class="font-mono font-bold tracking-widest leading-none" id="codiceStanzaLabel">------</div>
+      </div>
+      <span id="dotConnessione" class="w-2 h-2 rounded-full bg-amber-400 ml-1" title="Connessione"></span>
+    </div>
+    <div class="text-center">
+      <div class="text-[11px] text-slate-500 leading-none">Budget residuo</div>
+      <div class="text-2xl font-extrabold text-emerald-400 leading-tight" id="budgetLabel">0</div>
+    </div>
+    <div class="text-right flex items-center gap-3">
+      <span class="bg-emerald-500/15 text-emerald-400 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 tracking-wider">v2.1.3</span>
+      <div>
+        <div class="text-[11px] text-slate-500 leading-none">Fantasquadra</div>
+        <div class="font-semibold leading-none" id="nomeLabel">-</div>
+      </div>
+    </div>
+  </div>
+</header>
 
-            <!-- Bottoni -->
-            <div class="space-y-3">
-                <button id="btnRilancioRapido" 
-                        class="w-full bg-white/15 border border-white/25 text-white font-bold py-3 px-8 rounded-xl text-lg">
-                    RILANCIA +1
-                </button>
+<div id="bannerPausa" class="hidden bg-amber-500 text-slate-950 text-center font-bold py-2 sticky top-[49px] z-30">
+  ⏸ ASTA IN PAUSA — in attesa che l'admin riprenda
+</div>
 
-                <div class="flex items-center justify-center gap-2">
-                    <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
-                    <div id="stepperValueDisplay" class="text-2xl font-mono text-white min-w-[60px]">1</div>
-                    <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
-                    <button id="btnConfermaCompact" class="stepper-confirm">➜</button>
-                </div>
-            </div>
-        </div>
+<main class="max-w-6xl mx-auto p-3 lg:p-4 grid grid-cols-1 lg:grid-cols-[260px_1fr_300px] gap-4">
+
+  <!-- COLONNA SINISTRA: partecipanti + log + admin -->
+  <aside id="asideLeft" class="order-3 lg:order-1 space-y-3">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Partecipanti</h2>
+      <ul id="listaPartecipanti" class="space-y-1.5 text-sm"></ul>
     </div>
 
-    <!-- Resto della struttura originale -->
+    <div id="pannelloAdmin" class="bg-slate-900 border border-emerald-800/50 rounded-xl p-3 hidden">
+      <h2 class="text-sm font-bold text-emerald-400 uppercase tracking-wide mb-2">⚙️ Admin</h2>
+
+      <label class="block text-xs text-slate-400 mb-1">Durata timer rilancio (sec)</label>
+      <div class="flex gap-2 mb-3">
+        <input type="number" id="timerInput" min="2" max="60" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <button id="btnTimerSalva" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-3 rounded-lg">OK</button>
+      </div>
+
+      <button id="btnTogglePausa" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-lg text-sm mb-3">
+        ⏸ Metti in pausa
+      </button>
+
+      <button id="btnMostraQr" class="w-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold py-1.5 rounded-lg mb-3">
+        📱 Mostra QR per invitare
+      </button>
+      <div id="blocQr" class="hidden text-center bg-white rounded-lg p-3 mb-3">
+        <div id="qrCanvasWrap"></div>
+        <p id="qrLinkTesto" class="text-[10px] text-slate-700 break-all mt-2"></p>
+      </div>
+
+      <button id="btnScaricaTutteJson" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-1.5 rounded-lg mb-1.5">
+        ⬇️ Scarica tutte le rose (JSON)
+      </button>
+      <button id="btnScaricaTutteTxt" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-1.5 rounded-lg">
+        ⬇️ Scarica tutte le rose (TXT)
+      </button>
+
+      <div class="mt-3 pt-3 border-t border-slate-800">
+        <div class="text-xs text-slate-400 mb-1">💾 Backup automatico stanza</div>
+        <div id="backupStatoLabel" class="text-xs text-slate-500 mb-2">in attesa del primo backup (ogni 60s)...</div>
+        <button id="btnScaricaBackup" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-1.5 rounded-lg mb-1.5">
+          ⬇️ Scarica ultimo backup
+        </button>
+        <button id="btnRipristinaBackup" class="w-full bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold py-1.5 rounded-lg">
+          🔄 Ripristina da Backup
+        </button>
+      </div>
+
+      <div class="mt-3 pt-3 border-t border-slate-800">
+        <div class="text-xs text-slate-400 mb-1">Listino calciatori</div>
+        <div id="listinoStato" class="text-xs text-slate-300 mb-2">caricamento...</div>
+        <button id="btnRicaricaListino" class="w-full bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold py-1.5 rounded-lg">
+          🔄 Ricarica listino
+        </button>
+      </div>
+    </div>
+
+    <!-- Gestione rose (solo admin, solo in pausa) -->
+    <div id="pannelloGestioneRose" class="bg-slate-900 border border-amber-700/50 rounded-xl p-3 hidden">
+      <h2 class="text-sm font-bold text-amber-400 uppercase tracking-wide mb-2">🛠 Correggi rose (in pausa)</h2>
+      <label class="block text-xs text-slate-400 mb-1">Squadra</label>
+      <select id="selectSquadraGestione" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1.5 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-amber-500"></select>
+      <div id="listaGestioneRosa" class="space-y-2 text-xs"></div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wide mb-2">Log Asta</h2>
+      <ul id="listaLog" class="space-y-1 text-xs text-slate-400 max-h-56 overflow-y-auto"></ul>
+    </div>
+  </aside>
+
+  <!-- COLONNA CENTRALE: tabellone asta -->
+  <section class="order-1 lg:order-2 space-y-4" style="overflow:visible;">
+
+    <!-- Form chiamata -->
+    <form id="formChiamata" class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap gap-2 items-end" style="overflow:visible;">
+      <div class="flex-1 min-w-[140px] relative" style="overflow:visible; z-index:999999;">
+        <label class="block text-xs text-slate-400 mb-1">Nome calciatore</label>
+        <input id="inputNomeCalciatore" required maxlength="40" placeholder="Es. Lautaro Martinez" autocomplete="off"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+        <ul id="listaSuggerimenti" class="hidden absolute z-[999999] !important left-0 right-0 mt-1 bg-slate-800 border border-slate-700 rounded-lg shadow-xl max-h-56 overflow-y-auto" style="position:absolute; z-index:999999 !important;"></ul>
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Ruolo</label>
+        <select id="selectRuolo" class="bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <option value="PORTIERE">Portiere</option>
+          <option value="DIFENSORE">Difensore</option>
+          <option value="CENTROCAMPISTA">Centrocampista</option>
+          <option value="ATTACCANTE">Attaccante</option>
+        </select>
+      </div>
+      <div class="w-24">
+        <label class="block text-xs text-slate-400 mb-1">Base</label>
+        <input type="number" id="inputPrezzoBase" value="1" min="1"
+               class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+      </div>
+      <button type="submit" id="btnChiama" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2 rounded-lg transition">
+        Chiama 📣
+      </button>
+    </form>
+
+    <!-- Piatto asta -->
+    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center transition-all" style="display:none;">
+      <div id="piattoAttivo" class="animate-pop">
+
+        <!-- 1: ruolo + nome + squadra -->
+        <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
+          <span id="badgeRuolo" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
+          <h2 id="nomeCalciatoreCorrente" class="text-xl font-extrabold">-</h2>
+          <span id="squadraCalciatore" class="text-xs text-slate-500"></span>
+        </div>
+
+        <!-- 2: barra tempo -->
+        <div id="timerStickyWrap" class="mb-3 sticky top-[49px] z-30 bg-slate-900/95 backdrop-blur -mx-6 px-6 py-2 rounded-xl border border-slate-800/50 shadow-lg">
+          <div id="secondiLabel" class="text-lg font-bold mb-1" style="color:#b45309;">10 s</div>
+          <div id="wrapperBarraTimer" class="w-full bg-slate-800 rounded-full overflow-hidden">
+            <div id="barraTimer" class="rounded-full" style="width:100%; background:#b45309; transition:width 1s linear, background-color 0.3s ease;"></div>
+          </div>
+        </div>
+
+        <!-- 3: PREZZO ATTUALE + LEADER -->
+        <div class="mb-1">
+          <div class="text-[11px] text-slate-500 uppercase tracking-wide mb-0.5">Offerta attuale</div>
+          <div id="prezzoAttualeDisplay" class="text-3xl font-black text-emerald-400 font-mono leading-none mb-0.5">-</div>
+          <div class="text-[10px] text-slate-500 mb-0.5">crediti</div>
+          <div id="leaderDisplay" class="text-sm font-bold"></div>
+        </div>
+
+        <!-- 4: CONTROLLI PUNTATA (nascosti se sei in testa) -->
+        <div id="biddingControls">
+
+          <!-- 4a: STEPPER COMPATTO -->
+          <div class="flex items-center justify-center gap-2 my-2">
+            <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
+            <div id="stepperValueDisplay" class="text-4xl font-black text-white font-mono min-w-[80px] leading-none">-</div>
+            <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
+          </div>
+
+          <!-- 4b: RILANCIA +1 -->
+          <button id="btnRilancioRapido" class="mx-auto block bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold py-2 px-8 rounded-xl text-base transition mb-1.5">
+            RILANCIA +1
+          </button>
+
+          <!-- 4c: CONFERMA RILANCIO -->
+          <button id="btnConfermaDial" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-xl text-lg transition mb-1.5">
+            CONFERMA RILANCIO
+          </button>
+
+        </div><!-- /biddingControls -->
+      </div>
+    </div>
+  </section>
+
+  <!-- COLONNA DESTRA: rosa personale -->
+  <aside id="asideRight" class="order-2 lg:order-3">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 sticky top-16">
+      <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wide mb-3">La mia rosa</h2>
+      <div id="rosaContainer" class="space-y-4"></div>
+      <div class="flex gap-2 mt-3 pt-3 border-t border-slate-800">
+        <button id="btnScaricaMiaJson" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-1.5 rounded-lg">
+          ⬇️ JSON
+        </button>
+        <button id="btnScaricaMiaTxt" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold py-1.5 rounded-lg">
+          ⬇️ TXT
+        </button>
+      </div>
+    </div>
+  </aside>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="js/stanza.js"></script>
 </body>
 </html>
