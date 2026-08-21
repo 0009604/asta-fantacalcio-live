@@ -152,66 +152,53 @@
     </form>
 
     <!-- Piatto asta -->
-    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 text-center transition-all shadow-2xl" style="display:none;">
+    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center transition-all" style="display:none;">
       <div id="piattoAttivo" class="animate-pop">
 
-        <!-- 1: Ruolo, Nome, Squadra -->
+        <!-- 1: ruolo + nome + squadra -->
         <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
-          <span id="badgeRuolo" class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"></span>
-          <h2 id="nomeCalciatoreCorrente" class="text-2xl font-black text-white">-</h2>
-          <span id="squadraCalciatore" class="text-sm font-semibold text-slate-400"></span>
+          <span id="badgeRuolo" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
+          <h2 id="nomeCalciatoreCorrente" class="text-xl font-extrabold">-</h2>
+          <span id="squadraCalciatore" class="text-xs text-slate-500"></span>
         </div>
 
-        <!-- 2: Barra del tempo che scorre -->
-        <div id="timerStickyWrap" class="mb-3 bg-slate-900/95 backdrop-blur px-4 py-2 rounded-xl border border-slate-800/50 shadow-lg">
+        <!-- 2: barra tempo -->
+        <div id="timerStickyWrap" class="mb-3 sticky top-[49px] z-30 bg-slate-900/95 backdrop-blur -mx-6 px-6 py-2 rounded-xl border border-slate-800/50 shadow-lg">
           <div id="secondiLabel" class="text-lg font-bold mb-1" style="color:#b45309;">10 s</div>
           <div id="wrapperBarraTimer" class="w-full bg-slate-800 rounded-full overflow-hidden">
             <div id="barraTimer" class="rounded-full" style="width:100%; background:#b45309; transition:width 1s linear, background-color 0.3s ease;"></div>
           </div>
         </div>
 
-        <!-- 3: Offerta attuale (pillola bianca semitrasparente + testo verde scuro) -->
-        <div class="my-2.5">
-          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Offerta attuale</div>
-          <div class="inline-flex items-center justify-center bg-white/90 backdrop-blur-md px-5 py-1.5 rounded-2xl shadow-lg border border-white/40">
-            <span id="prezzoAttualeDisplay" class="text-4xl font-black font-mono leading-none text-emerald-800">-</span>
-            <span class="text-xs font-bold text-emerald-900/70 ml-1.5 uppercase">crediti</span>
+        <!-- 3: PREZZO ATTUALE + LEADER -->
+        <div class="mb-1">
+          <div class="text-[11px] text-slate-500 uppercase tracking-wide mb-0.5">Offerta attuale</div>
+          <div id="prezzoAttualeDisplay" class="text-3xl font-black text-emerald-400 font-mono leading-none mb-0.5">-</div>
+          <div class="text-[10px] text-slate-500 mb-0.5">crediti</div>
+          <div id="leaderDisplay" class="text-sm font-bold"></div>
+        </div>
+
+        <!-- 4: CONTROLLI PUNTATA (nascosti se sei in testa) -->
+        <div id="biddingControls">
+
+          <!-- 4a: STEPPER COMPATTO -->
+          <div class="flex items-center justify-center gap-2 my-2">
+            <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
+            <div id="stepperValueDisplay" class="text-4xl font-black text-white font-mono min-w-[80px] leading-none">-</div>
+            <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
           </div>
-        </div>
 
-        <!-- 4 & 5: Poco spazio + Scritta In testa / Sei in testa -->
-        <div class="my-2">
-          <div id="leaderDisplay" class="text-base font-bold text-slate-300"></div>
-        </div>
-
-        <!-- 6 & 7 & 8 & 9: Controlli puntata (nascosti se sei in testa) -->
-        <div id="biddingControls" class="mt-3 space-y-3">
-
-          <!-- 7: Tasto RILANCIA +1 ingrandito -->
-          <button id="btnRilancioRapido" type="button" class="w-full bg-white/10 hover:bg-white/20 border-2 border-white/30 text-white font-extrabold py-3 px-6 rounded-2xl text-lg tracking-wide transition shadow-md active:scale-95">
-            ⚡ RILANCIA +1
+          <!-- 4b: RILANCIA +1 -->
+          <button id="btnRilancioRapido" class="mx-auto block bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold py-2 px-8 rounded-xl text-base transition mb-1.5">
+            RILANCIA +1
           </button>
 
-          <!-- 9: Riga compatta: [ - ] [ valore rilancio ] [ + ] [ ↵ Invio ] -->
-          <div class="flex items-center justify-center gap-2 sm:gap-3">
-            <button id="btnStepperMinus" type="button" class="stepper-btn stepper-btn-minus">−</button>
-            
-            <div class="stepper-display-box px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 min-w-[70px] flex items-center justify-center">
-              <span id="stepperValueDisplay" class="text-2xl font-black text-white font-mono leading-none">-</span>
-            </div>
-            
-            <button id="btnStepperPlus" type="button" class="stepper-btn stepper-btn-plus">+</button>
-
-            <!-- Tasto Invio Verde con freccia per inviare la puntata -->
-            <button id="btnConfermaDial" type="button" title="Invia puntata" class="stepper-btn stepper-btn-send">
-              <svg class="w-6 h-6 stroke-[3]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 12h15"/>
-              </svg>
-            </button>
-          </div>
+          <!-- 4c: CONFERMA RILANCIO -->
+          <button id="btnConfermaDial" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-xl text-lg transition mb-1.5">
+            CONFERMA RILANCIO
+          </button>
 
         </div><!-- /biddingControls -->
-
       </div>
     </div>
   </section>
