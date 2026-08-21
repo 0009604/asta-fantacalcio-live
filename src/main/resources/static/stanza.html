@@ -170,33 +170,31 @@
           </div>
         </div>
 
-        <!-- 3: PREZZO ATTUALE + LEADER -->
-        <div class="mb-1">
-          <div class="text-[11px] text-slate-500 uppercase tracking-wide mb-0.5">Offerta attuale</div>
-          <div id="prezzoAttualeDisplay" class="text-3xl font-black text-emerald-400 font-mono leading-none mb-0.5">-</div>
+        <!-- 3: BLOCCO OFFERTA ATTUALE (wrapper dedicato) -->
+        <div id="offertaAttualeWrapper" class="mb-2">
+          <div class="text-[11px] text-slate-500 uppercase tracking-wide mb-0.5">Offerta Attuale</div>
+          <div id="prezzoAttualeDisplay" class="text-3xl font-black font-mono leading-none mb-0.5">-</div>
           <div class="text-[10px] text-slate-500 mb-0.5">crediti</div>
-          <div id="leaderDisplay" class="text-sm font-bold"></div>
         </div>
 
-        <!-- 4: CONTROLLI PUNTATA (nascosti se sei in testa) -->
+        <!-- 4: STATO AGGIUDICAZIONE -->
+        <div id="leaderDisplay" class="text-sm font-bold mb-3"></div>
+
+        <!-- 5: CONTROLLI PUNTATA (nascosti se sei in testa) -->
         <div id="biddingControls">
 
-          <!-- 4a: STEPPER COMPATTO -->
-          <div class="flex items-center justify-center gap-2 my-2">
-            <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
-            <div id="stepperValueDisplay" class="text-4xl font-black text-white font-mono min-w-[80px] leading-none">-</div>
-            <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
-          </div>
-
-          <!-- 4b: RILANCIA +1 -->
-          <button id="btnRilancioRapido" class="mx-auto block bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold py-2 px-8 rounded-xl text-base transition mb-1.5">
+          <!-- 5a: RILANCIA +1 -->
+          <button id="btnRilancioRapido" class="mx-auto block bg-white/10 hover:bg-white/20 border border-white/25 text-white font-bold py-3 px-10 rounded-xl text-lg transition mb-3">
             RILANCIA +1
           </button>
 
-          <!-- 4c: CONFERMA RILANCIO -->
-          <button id="btnConfermaDial" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-xl text-lg transition mb-1.5">
-            CONFERMA RILANCIO
-          </button>
+          <!-- 5b: RIGA CONTROLLI MANUALI -->
+          <div id="controlliManuali" class="flex items-center justify-center gap-2">
+            <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
+            <input type="number" id="inputOffertaManuale" min="1" value="1" class="input-offerta-manuale">
+            <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
+            <button id="btnInviaOfferta" class="btn-invia-offerta" title="Conferma offerta">➜</button>
+          </div>
 
         </div><!-- /biddingControls -->
       </div>
