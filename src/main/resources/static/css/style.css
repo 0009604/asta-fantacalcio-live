@@ -45,6 +45,7 @@ button, [type="submit"] {
 
 /* ── Bid buttons — Mobile first ──────────────────── */
 #btnRilancioRapido,
+#btnConfermaDial,
 #btnChiama {
   min-height: 52px;
   font-size: 1.05rem;
@@ -58,8 +59,8 @@ button, [type="submit"] {
 
 /* Big "RILANCIA +1" button */
 #btnRilancioRapido {
-  min-height: 56px;
-  font-size: 1.25rem;
+  min-height: 48px;
+  font-size: 1.05rem;
   background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.15) 100%);
   border: 1.5px solid rgba(255,255,255,0.25) !important;
   color: #fff;
@@ -72,6 +73,22 @@ button, [type="submit"] {
   transform: scale(1.02);
 }
 
+/* CONFERMA RILANCIO — primary action */
+#btnConfermaDial {
+  min-height: 56px;
+  font-size: 1.15rem;
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  color: #0c0c0c;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(14,165,233,0.4), inset 0 1px 0 rgba(255,255,255,0.15);
+  letter-spacing: 0.03em;
+}
+#btnConfermaDial:hover, #btnConfermaDial:active {
+  background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
+  box-shadow: 0 6px 20px rgba(14,165,233,0.5), inset 0 1px 0 rgba(255,255,255,0.2);
+  transform: translateY(-1px);
+}
+
 /* Chiama button */
 #btnChiama {
   background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
@@ -82,79 +99,6 @@ button, [type="submit"] {
 #btnChiama:hover, #btnChiama:active {
   background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%);
   transform: translateY(-1px);
-}
-
-/* ── Offerta Attuale Wrapper ─────────────────────── */
-#offertaAttualeWrapper {
-  background: rgba(255, 255, 255, 0.85);
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-  display: inline-block;
-  min-width: 160px;
-}
-#offertaAttualeWrapper .text-slate-500 {
-  color: #064e3b !important;
-}
-#offertaAttualeWrapper #prezzoAttualeDisplay {
-  color: #064e3b !important;
-}
-
-/* ── Controlli manuali ───────────────────────────── */
-#controlliManuali {
-  gap: 0.5rem;
-}
-
-.input-offerta-manuale {
-  width: 72px;
-  height: 48px;
-  text-align: center;
-  font-size: 0.95rem;
-  font-weight: 800;
-  font-family: monospace;
-  background: rgba(255,255,255,0.08);
-  border: 1.5px solid rgba(255,255,255,0.2);
-  border-radius: 0.75rem;
-  color: #fff;
-  outline: none;
-  -moz-appearance: textfield;
-}
-.input-offerta-manuale::-webkit-outer-spin-button,
-.input-offerta-manuale::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.input-offerta-manuale:focus {
-  border-color: rgba(14,165,233,0.6);
-  box-shadow: 0 0 12px rgba(14,165,233,0.25);
-}
-
-/* Green arrow send button */
-.btn-invia-offerta {
-  width: 48px;
-  height: 48px;
-  border-radius: 0.75rem !important;
-  font-size: 1.4rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: #fff;
-  border: none !important;
-  box-shadow: 0 3px 12px rgba(16,185,129,0.4);
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: manipulation;
-  transition: all 0.15s ease;
-}
-.btn-invia-offerta:hover:not(:disabled) {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
-  box-shadow: 0 4px 18px rgba(16,185,129,0.5);
-  transform: scale(1.05);
-}
-.btn-invia-offerta:active:not(:disabled) {
-  transform: scale(0.92);
 }
 
 /* ── Timer Sticky ───────────────────────────────── */
@@ -190,11 +134,15 @@ button, [type="submit"] {
 }
 
 /* ── Stepper Compact ─────────────────────────────── */
+#stepperValueDisplay {
+  text-shadow: 0 0 20px rgba(255,255,255,0.15);
+}
+
 .stepper-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 0.85rem !important;
-  font-size: 1.4rem;
+  width: 52px;
+  height: 52px;
+  border-radius: 1rem !important;
+  font-size: 1.5rem;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -392,10 +340,6 @@ html, body {
   overflow-x: hidden;
 }
 
-main {
-  padding-bottom: 25vh;
-}
-
 main, main > section, main > aside {
   width: 100%;
   max-width: 100%;
@@ -440,26 +384,22 @@ body.focus-asta #piattoAsta {
   #piattoAsta {
     padding: 0.75rem 0.625rem;
   }
+  #btnConfermaDial {
+    min-height: 48px;
+    font-size: 1rem;
+  }
   #btnRilancioRapido {
-    min-height: 44px;
-    font-size: 1.1rem;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    min-height: 40px;
+    font-size: 0.9rem;
   }
   .stepper-btn {
-    width: 42px;
-    height: 42px;
-    font-size: 1.2rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.3rem;
   }
-  .input-offerta-manuale {
-    width: 60px;
-    height: 42px;
-    font-size: 0.85rem;
-  }
-  .btn-invia-offerta {
-    width: 42px;
-    height: 42px;
-    font-size: 1.2rem;
+  #stepperValueDisplay {
+    font-size: 2.25rem;
+    min-width: 64px;
   }
 }
 

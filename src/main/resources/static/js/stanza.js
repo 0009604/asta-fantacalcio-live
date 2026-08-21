@@ -66,12 +66,14 @@ function resetDialState() {
   ultimaOffertaVista = null;
   userHasSelectedValue = null;
   ultimoSecondoVibrato = null;
-  var inp = document.getElementById('inputOffertaManuale');
-  if (inp) inp.value = '1';
+  var sv = document.getElementById('stepperValueDisplay');
+  if (sv) sv.textContent = '1';
   var pp = document.getElementById('prezzoAttualeDisplay');
   if (pp) pp.textContent = '-';
   var ld = document.getElementById('leaderDisplay');
   if (ld) ld.textContent = '';
+  var btnConf = document.getElementById('btnConfermaDial');
+  if (btnConf) btnConf.textContent = 'CONFERMA RILANCIO';
 }
 
 // ---------------------------------------------------------------- AUDIO (beep locale, solo su azione propria)
@@ -458,7 +460,7 @@ function renderPausa(inPausa, sonoAdmin) {
   formChiamata.querySelectorAll('input, select, button').forEach(el => el.disabled = inPausa);
   formChiamata.classList.toggle('opacity-50', inPausa);
 
-  ['btnRilancioRapido', 'btnInviaOfferta', 'btnStepperMinus', 'btnStepperPlus'].forEach(id => {
+  ['btnRilancioRapido', 'btnConfermaDial', 'btnStepperMinus', 'btnStepperPlus'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.disabled = inPausa;
@@ -466,8 +468,6 @@ function renderPausa(inPausa, sonoAdmin) {
       el.classList.toggle('cursor-not-allowed', inPausa);
     }
   });
-  const inpManuale = document.getElementById('inputOffertaManuale');
-  if (inpManuale) inpManuale.disabled = inPausa;
 }
 
 function renderPartecipanti(partecipanti, adminNome, astaCorrente) {
@@ -674,10 +674,7 @@ function renderPiatto(asta, config, me) {
     resetDialState();
     document.body.classList.add('focus-asta');
     setTimeout(() => {
-      var target = document.getElementById('offertaAttualeWrapper');
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }, 100);
   }
 
@@ -743,23 +740,22 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
 
   const slotUsatiRuolo = (me && me.rosa[asta.ruolo]) ? me.rosa[asta.ruolo].length : 0;
   const slotTotaliRuolo = config[SLOT_CONFIG_KEY[asta.ruolo]];
-  const haSlotLiberi = slotUsatiRuolo < slotTotaliRuolo;
+  const haSlotLiberi = slotTotaliRuolo - slotUsatiRuolo > 0;
 
+  const svEl = document.getElementById('stepperValueDisplay');
   const ppEl = document.getElementById('prezzoAttualeDisplay');
   const ldEl = document.getElementById('leaderDisplay');
+  const btnConf = document.getElementById('btnConfermaDial');
   const btnRapido = document.getElementById('btnRilancioRapido');
   const btnMinus = document.getElementById('btnStepperMinus');
   const btnPlus = document.getElementById('btnStepperPlus');
-  const btnInvia = document.getElementById('btnInviaOfferta');
-  const inpManuale = document.getElementById('inputOffertaManuale');
   const biddingBox = document.getElementById('biddingControls');
 
   // --- SEI IN TESTA: nascondi controlli, mostra solo leader grande ---
   if (sonoIoInTesta) {
     biddingBox.style.display = 'none';
     ppEl.textContent = asta.offertaCorrente;
-    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5';
-    ppEl.style.color = '#064e3b';
+    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-emerald-400';
     ldEl.textContent = 'Sei in testa! \uD83C\uDF89';
     ldEl.className = 'text-lg font-extrabold text-emerald-400';
     return;
@@ -771,20 +767,18 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   const disabilitato = !haSlotLiberi || max < min;
 
   if (disabilitato) {
-    btnInvia.disabled = true;
-    btnInvia.classList.add('opacity-40', 'cursor-not-allowed');
+    btnConf.disabled = true;
+    btnConf.classList.add('opacity-40', 'cursor-not-allowed');
     btnRapido.disabled = true;
     btnRapido.classList.add('opacity-40', 'cursor-not-allowed');
     btnMinus.disabled = true;
     btnMinus.classList.add('opacity-40', 'cursor-not-allowed');
     btnPlus.disabled = true;
     btnPlus.classList.add('opacity-40', 'cursor-not-allowed');
-    inpManuale.disabled = true;
-    inpManuale.value = '—';
-    inpManuale.className = 'input-offerta-manuale opacity-40';
+    svEl.textContent = '—';
+    svEl.className = 'text-4xl font-black text-slate-500 font-mono min-w-[80px] leading-none';
     ppEl.textContent = asta.offertaCorrente || '—';
-    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5';
-    ppEl.style.color = '#064e3b';
+    ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-slate-200';
     if (!haSlotLiberi) {
       ldEl.textContent = 'ruolo pieno';
       ldEl.className = 'text-sm font-bold text-rose-400';
@@ -797,20 +791,17 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
     return;
   }
 
-  btnInvia.disabled = false;
-  btnInvia.classList.remove('opacity-40', 'cursor-not-allowed');
+  btnConf.disabled = false;
+  btnConf.classList.remove('opacity-40', 'cursor-not-allowed');
   btnRapido.disabled = false;
   btnRapido.classList.remove('opacity-40', 'cursor-not-allowed');
   btnMinus.disabled = false;
   btnMinus.classList.remove('opacity-40', 'cursor-not-allowed');
   btnPlus.disabled = false;
   btnPlus.classList.remove('opacity-40', 'cursor-not-allowed');
-  inpManuale.disabled = false;
-  inpManuale.className = 'input-offerta-manuale';
 
   ppEl.textContent = asta.offertaCorrente;
-  ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5';
-  ppEl.style.color = '#064e3b';
+  ppEl.className = 'text-3xl font-black font-mono leading-none mb-0.5 text-slate-200';
   ldEl.textContent = asta.offerenteNome ? ('In testa: ' + asta.offerenteNome) : '';
   ldEl.className = 'text-sm font-bold text-slate-400';
 
@@ -825,7 +816,9 @@ function aggiornaStepper(asta, config, me, sonoIoInTesta) {
   }
   valoreStaged = Math.min(Math.max(valoreStaged, min), max);
 
-  inpManuale.value = valoreStaged;
+  svEl.textContent = valoreStaged;
+  svEl.className = 'text-4xl font-black text-white font-mono min-w-[80px] leading-none';
+  btnConf.textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
 
   btnMinus.disabled = valoreStaged <= min;
   btnMinus.classList.toggle('opacity-40', valoreStaged <= min);
@@ -868,8 +861,8 @@ function applyStepperDelta(delta) {
   if (max < min) return;
   valoreStaged = Math.min(Math.max(valoreStaged + delta, min), max);
   userHasSelectedValue = true;
-  var inp = document.getElementById('inputOffertaManuale');
-  if (inp) inp.value = valoreStaged;
+  document.getElementById('stepperValueDisplay').textContent = valoreStaged;
+  document.getElementById('btnConfermaDial').textContent = 'CONFERMA RILANCIO (' + valoreStaged + ' cr.)';
   document.getElementById('btnStepperMinus').disabled = valoreStaged <= min;
   document.getElementById('btnStepperMinus').classList.toggle('opacity-40', valoreStaged <= min);
   document.getElementById('btnStepperPlus').disabled = valoreStaged >= max;
@@ -906,26 +899,13 @@ let longPressInterval = null;
   btnPlus.addEventListener('touchcancel', stopLongPress);
 })();
 
-// Input manuale: sincronizza valoreStaged quando l'utente digita
-document.getElementById('inputOffertaManuale').addEventListener('input', function() {
-  var v = parseInt(this.value, 10);
-  if (!isNaN(v)) {
-    valoreStaged = Math.min(Math.max(v, steppMin), steppMax);
-    userHasSelectedValue = true;
-    this.value = valoreStaged;
-  }
-});
-
-document.getElementById('btnInviaOfferta').addEventListener('click', () => {
-  var inp = document.getElementById('inputOffertaManuale');
-  var v = parseInt(inp.value, 10);
-  if (isNaN(v)) return;
-  if (v < steppMin || v > steppMax) return;
+document.getElementById('btnConfermaDial').addEventListener('click', () => {
+  if (!valoreStaged) return;
   beep();
   userHasSelectedValue = false;
   stompClient.publish({
     destination: '/app/stanza/' + codiceStanza + '/rilancio',
-    body: JSON.stringify({ importo: v })
+    body: JSON.stringify({ importo: valoreStaged })
   });
 });
 
