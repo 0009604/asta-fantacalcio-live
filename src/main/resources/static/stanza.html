@@ -1,2 +1,58 @@
-<html>
-...MODIFICA HTML TAVOLO CON NUOVI ID NA SPAZI SEQUENZA BAR..
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stanza Asta</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="js/stanza.js" defer></script>
+</head>
+<body>
+    <!-- Inizio struttura completa -->
+
+    <!-- Blocco tavolo d'asta con correzioni al layout del `piattoAsta` -->
+    <div id="piattoAsta" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 text-center transition-all" style="display:none;">
+        <div id="piattoAttivo" class="animate-pop space-y-3">
+            <!-- Ruolo, Nome, Squadra -->
+            <div class="flex items-center justify-center gap-2 mb-2 flex-wrap">
+                <span id="badgeRuolo" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"></span>
+                <h2 id="nomeCalciatoreCorrente" class="text-xl font-extrabold">-</h2>
+                <span id="squadraCalciatore" class="text-xs text-slate-500"></span>
+            </div>
+
+            <!-- Timer barra -->
+            <div id="wrapperBarraTimer" class="w-full bg-slate-800 rounded-full overflow-hidden">
+                <div id="barraTimer" class="rounded-full h-3" style="width:100%; background:#b45309; transition:width 1s linear, background-color 0.3s ease;"></div>
+            </div>
+
+            <!-- Offerta attuale -->
+            <div class="my-3">
+                <div class="inline-block bg-white/85 rounded-xl px-4 py-2">
+                    <div class="text-[11px] text-slate-600 uppercase tracking-wide">Offerta attuale</div>
+                    <div id="prezzoAttualeDisplay" class="text-4xl font-black text-emerald-900 font-mono leading-none">-</div>
+                </div>
+            </div>
+
+            <!-- Chi è in testa -->
+            <div id="leaderDisplay" class="text-base font-bold mb-4"></div>
+
+            <!-- Bottoni -->
+            <div class="space-y-3">
+                <button id="btnRilancioRapido" 
+                        class="w-full bg-white/15 border border-white/25 text-white font-bold py-3 px-8 rounded-xl text-lg">
+                    RILANCIA +1
+                </button>
+
+                <div class="flex items-center justify-center gap-2">
+                    <button id="btnStepperMinus" class="stepper-btn stepper-btn-minus">−</button>
+                    <div id="stepperValueDisplay" class="text-2xl font-mono text-white min-w-[60px]">1</div>
+                    <button id="btnStepperPlus" class="stepper-btn stepper-btn-plus">+</button>
+                    <button id="btnConfermaCompact" class="stepper-confirm">➜</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resto della struttura originale -->
+</body>
+</html>
